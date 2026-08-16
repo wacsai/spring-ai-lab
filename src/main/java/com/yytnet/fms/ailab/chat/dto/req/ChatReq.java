@@ -4,6 +4,6 @@ import jakarta.validation.constraints.NotBlank;
 
 public record ChatReq(
         @NotBlank(message = "信息不能为空")
-        String message
+        String msg
 ) {
 }

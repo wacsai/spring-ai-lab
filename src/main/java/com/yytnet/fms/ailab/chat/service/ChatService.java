@@ -16,9 +16,9 @@ public class ChatService {
     /**
      * 调用chatClient进行对话
      */
-    public String chat(String message) {
+    public String chat(String msg) {
         String content = chatClient.prompt()
-                .user(message)
+                .user(msg)
                 .call()
                 .content();
         return content == null ? "" : content;

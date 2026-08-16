@@ -21,7 +21,7 @@ public class ChatController {
 
     @PostMapping("/chat")
     public ChatResp chat(@Valid @RequestBody ChatReq req) {
-        return new ChatResp(chatService.chat(req.message()));
+        return new ChatResp(chatService.chat(req.msg()));
     }
 
 }
