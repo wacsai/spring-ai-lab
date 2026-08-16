@@ -2,21 +2,30 @@
 
 ## Current Baseline
 
-当前仓库只完成了 Spring Boot 项目骨架和一个 Controller demo。
+当前仓库已完成 Phase 1A 和 Phase 1B。
 
 ```text
-POST /chat/test
+POST /api/ai/chat
 ↓
-"test"
+ChatController
+↓
+ChatService
+↓
+ChatClient
+↓
+System Prompt + User Prompt + Model Options
+↓
+Ollama qwen3.5:4b
 ```
 
-还没有开始正式 Spring AI 集成：
+当前接口支持：
 
-- 未启用 Spring AI Starter
-- 未配置 Ollama ChatModel
-- 未创建 ChatClient
-- 未建立 Controller / Service / DTO 调用链
-- 未调用 `http://192.168.0.50:11434`
+- `msg`
+- `systemPrompt`
+- `temperature`
+- `topP`
+- `topK`
+- `numPredict`
 
 后续按阶段推进，每个阶段只完成一个明确能力，并保持可运行、可验证。
 

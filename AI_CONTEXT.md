@@ -106,7 +106,7 @@ Spring AI 负责：
 
 当前真实状态：
 
-**Spring AI Stage 1A: Spring Boot + Spring AI + Ollama 最小闭环已完成**
+**Spring AI Stage 1B: ChatClient / Prompt / Model Options 已完成**
 
 当前代码已经从 Controller demo 推进到基础 AI 调用链：
 
@@ -119,6 +119,8 @@ ChatService
 ↓
 ChatClient
 ↓
+System Prompt + User Prompt + Model Options
+↓
 Spring AI Ollama
 ↓
 qwen3.5:4b
@@ -127,7 +129,7 @@ qwen3.5:4b
 当前已完成：
 
 ```text
-代码结构 + 编译验证 + 真实接口调用验证
+代码结构 + 编译验证 + 真实接口调用验证 + System Prompt + 请求级 Model Options
 ```
 
 已验证：
@@ -137,6 +139,17 @@ POST /api/ai/chat
 → Ollama
 → qwen3.5:4b
 → 返回模型回答
+```
+
+当前接口支持：
+
+```text
+msg
+systemPrompt
+temperature
+topP
+topK
+numPredict
 ```
 
 目标链路：
