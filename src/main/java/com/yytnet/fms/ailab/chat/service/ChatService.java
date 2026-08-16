@@ -36,21 +36,27 @@ public class ChatService {
      * @return 聊天内容
      */
     public String chat(ChatReq req) {
+        // 构建 ChatClientRequestSpec
         ChatClient.ChatClientRequestSpec requestSpec = chatClient.prompt()
                 .system(system -> system
                         .text(SYSTEM_PROMPT_TEMPLATE)
                         .param("customSystemPrompt", resolveCustomSystemPrompt(req.systemPrompt())))
                 .user(req.msg());
 
+        // 构建 OllamaChatOptions 构建器
         OllamaChatOptions.Builder optionsBuilder = OllamaChatOptions.builder()
+                // 请求级 options 会参与覆盖默认配置；显式设置 model 可避免只传 temperature 等参数时丢失模型名。
                 .model(model)
                 // qwen thinking 输出可能不会进入 content；当前阶段先关闭，保证接口稳定返回文本。
                 .disableThinking();
+        
+        // 应用请求参数到 OllamaChatOptions 中
         boolean hasOptions = applyOptions(req, optionsBuilder);
         if (hasOptions) {
             requestSpec = requestSpec.options(optionsBuilder);
         }
 
+        // 调用聊天接口
         String content = requestSpec
                 .call()
                 .content();
@@ -68,18 +74,22 @@ public class ChatService {
         // 只设置调用方传入的参数；未传的参数继续使用 application.yaml 中的默认配置。
         boolean hasOptions = false;
 
+        // 设置温度
         if (req.temperature() != null) {
             optionsBuilder.temperature(req.temperature());
             hasOptions = true;
         }
+        // 设置 topP
         if (req.topP() != null) {
             optionsBuilder.topP(req.topP());
             hasOptions = true;
         }
+        // 设置 topK
         if (req.topK() != null) {
             optionsBuilder.topK(req.topK());
             hasOptions = true;
         }
+        // 设置 numPredict
         if (req.numPredict() != null) {
             optionsBuilder.numPredict(req.numPredict());
             hasOptions = true;
