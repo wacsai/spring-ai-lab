@@ -1,0 +1,92 @@
+# Architecture
+
+## 1. 当前目标架构
+
+```text
+Client / Frontend
+        │
+        ▼
+Spring Boot Application
+        │
+        ├── Controller
+        ├── Service
+        ├── Repository
+        │
+        └── Spring AI
+              │
+              ├── ChatClient / ChatModel
+              ├── Structured Output
+              ├── Tool Calling
+              ├── EmbeddingModel
+              ├── VectorStore
+              ├── RAG
+              ├── Chat Memory
+              ├── Agent
+              └── MCP
+                    │
+          ┌─────────┼──────────┐
+          ▼         ▼          ▼
+       Ollama    PostgreSQL   External Tools
+          │       + pgvector
+          ▼
+     qwen3.5:4b
+```
+
+## 2. 基础设施
+
+### Model Runtime
+
+```text
+Ubuntu Server
+└── Docker
+    └── Ollama
+        └── qwen3.5:4b
+```
+
+API:
+
+```text
+http://192.168.0.50:11434
+```
+
+### Vector Storage
+
+第一阶段使用：
+
+```text
+PostgreSQL + pgvector
+```
+
+后续对比：
+
+```text
+Qdrant
+```
+
+### Multimedia
+
+```text
+ComfyUI
+→ Image / Video Generation
+
+TTS
+→ Voice
+
+Lip Sync
+→ Audio / Mouth Alignment
+
+FFmpeg
+→ Final Processing
+```
+
+## 3. 设计原则
+
+- Spring Boot 是业务宿主
+- Spring AI 是 AI 能力层
+- Ollama 是模型运行时
+- Qwen 是当前 LLM
+- Embedding Model 与 Chat Model 分离
+- pgvector / Qdrant 负责 Vector Search
+- Tool Calling 负责连接真实业务能力
+- MCP 用于标准化外部工具/资源接入
+- Agent 建立在 Tool + State + Loop + Model 之上

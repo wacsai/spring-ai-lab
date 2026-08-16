@@ -1,0 +1,118 @@
+# Architecture Decision Log
+
+## ADR-001: Java AI 主线使用 Spring AI
+
+Status: Accepted
+
+### Decision
+
+以 Spring Boot + Spring AI 作为 Java AI 应用开发主线。
+
+### Reason
+
+- 与现有 Java / Spring 技术栈一致
+- 适合企业业务系统集成
+- 支持 Chat、Embedding、VectorStore、RAG、Tool Calling、MCP 等能力
+
+### Alternatives
+
+- LangChain
+- LangGraph
+
+### Follow-up
+
+后续学习 LangChain / LangGraph，用于理解 Python AI 生态和复杂 Agent 编排。
+
+---
+
+## ADR-002: 当前 LLM Runtime 使用 Ollama
+
+Status: Accepted
+
+### Decision
+
+本地模型通过 Docker Ollama 运行。
+
+### Current Model
+
+```text
+qwen3.5:4b
+```
+
+### Endpoint
+
+```text
+http://192.168.0.50:11434
+```
+
+### Reason
+
+- 本地部署简单
+- GPU 已验证
+- 便于 Spring AI / ComfyUI / Mac 开发环境共同调用
+
+---
+
+## ADR-003: 第一套向量存储使用 PostgreSQL + pgvector
+
+Status: Planned
+
+### Decision
+
+先使用 PostgreSQL + pgvector 完成 RAG。
+
+### Reason
+
+- 已熟悉 PostgreSQL
+- 与企业 Java 应用集成简单
+- 便于学习向量存储本质
+
+### Follow-up
+
+第二阶段增加 Qdrant，对比专业 Vector DB 与 pgvector 的差异。
+
+---
+
+## ADR-004: DeepSeek Harness 暂不纳入当前架构
+
+Status: Accepted
+
+### Decision
+
+当前项目不引入 DeepSeek Harness。
+
+### Reason
+
+当前目标是自行使用 Spring AI 构建企业 Agent，而不是使用独立 Agent Harness 作为主要运行时。
+
+---
+
+## ADR-005: 学习路线按最小闭环逐阶段推进
+
+Status: Accepted
+
+### Decision
+
+当前仓库先从 Spring Boot + Spring AI + Ollama 的最小闭环开始，不提前实现 Structured Output、Tool Calling、Embedding、RAG、Memory、Agent 或 MCP。
+
+第一阶段只完成：
+
+```text
+REST API
+→ Service
+→ ChatClient
+→ Ollama
+→ qwen3.5:4b
+```
+
+### Reason
+
+- 当前代码只有一个 Controller demo，正式 Spring AI 集成尚未开始。
+- 先完成可运行、可验证的最小链路，便于定位依赖、配置、网络和模型调用问题。
+- 后续能力之间存在前置关系，例如 RAG 依赖 Embedding 和 VectorStore，Agent 依赖 Tool Calling、Memory 和状态管理。
+
+### Impact
+
+- 每个阶段只引入当前阶段必需的依赖和配置。
+- 每完成一个阶段更新 `docs/current-status.md`。
+- 后续阶段可以预留包结构或接口，但不提前大规模实现。
