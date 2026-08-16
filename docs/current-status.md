@@ -7,10 +7,13 @@ Last Updated: 2026-08-17
 ### Project Skeleton
 
 - [x] Spring Boot 项目骨架已创建
-- [x] 当前只有一个 Controller demo: `POST /chat/test`
-- [x] 当前代码还没有接入 Spring AI
-- [x] 当前代码还没有调用 Ollama
-- [x] 当前代码还没有 Service / DTO 分层
+- [x] 已接入 Spring AI Ollama Starter
+- [x] 已配置 Ollama base-url 和 chat model
+- [x] 已建立 Controller / Service / DTO 基础分层
+- [x] 已提供 `POST /api/ai/chat`
+- [x] `mvn -q -DskipTests compile` 已通过
+- [x] Spring Boot 已启动验证
+- [x] `POST /api/ai/chat` 已调用 Ollama 并返回模型回答
 
 ### GPU / Docker
 
@@ -39,7 +42,7 @@ Last Updated: 2026-08-17
 
 ## Current Stage
 
-**Spring AI Stage 0: 项目骨架已创建，正式 Spring AI 学习尚未开始**
+**Spring AI Stage 1A: Spring Boot + Spring AI + Ollama 最小闭环已完成**
 
 当前真实状态：
 
@@ -48,38 +51,37 @@ Client
 ↓
 ChatController
 ↓
-"test"
-```
-
-目标不是在当前阶段补齐所有 AI 能力，而是先进入最小可运行闭环。
-
-## Next Task
-
-进入 **Phase 1A - Spring Boot + Spring AI + Ollama 最小闭环**，完成：
-
-```text
-REST API
+ChatService
 ↓
-Service
+ChatClient
 ↓
-Spring AI ChatClient
-↓
-Ollama
+Spring AI Ollama
 ↓
 qwen3.5:4b
 ```
 
+当前代码已经完成最小闭环的代码结构、编译验证和真实接口调用验证。
+
+## Next Task
+
+进入 **Phase 1B - ChatClient / Prompt / Model Options**：
+
+```text
+System Prompt
+→ User Prompt
+→ Prompt Template
+→ Model Options
+→ 请求级参数覆盖
+```
+
 验收标准：
 
-- Spring Boot 可正常启动
-- Spring AI Ollama Starter 配置正确
-- 可调用 `http://192.168.0.50:11434`
-- `/api/ai/chat` 能返回模型回答
-- Controller / Service / DTO 分层完成
+- 可以通过不同接口或参数测试不同 Prompt
+- 可以解释 System Prompt 和 User Prompt 的职责差异
+- 可以在一次请求中覆盖默认模型参数
 
 ## Pending
 
-- [ ] Phase 1A: Spring Boot + Spring AI + Ollama 最小闭环
 - [ ] Phase 1B: ChatClient / Prompt / Model Options
 - [ ] Phase 1C: Streaming
 - [ ] Advisors 基础

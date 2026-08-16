@@ -106,17 +106,40 @@ Spring AI 负责：
 
 当前真实状态：
 
-**Spring AI Stage 0: 项目骨架已创建，正式 Spring AI 学习尚未开始**
+**Spring AI Stage 1A: Spring Boot + Spring AI + Ollama 最小闭环已完成**
 
-当前代码只包含一个 Controller demo：
+当前代码已经从 Controller demo 推进到基础 AI 调用链：
 
 ```text
-POST /chat/test
+POST /api/ai/chat
 ↓
-"test"
+ChatController
+↓
+ChatService
+↓
+ChatClient
+↓
+Spring AI Ollama
+↓
+qwen3.5:4b
 ```
 
-下一步目标：
+当前已完成：
+
+```text
+代码结构 + 编译验证 + 真实接口调用验证
+```
+
+已验证：
+
+```text
+POST /api/ai/chat
+→ Ollama
+→ qwen3.5:4b
+→ 返回模型回答
+```
+
+目标链路：
 
 ```text
 Mac Spring Boot
