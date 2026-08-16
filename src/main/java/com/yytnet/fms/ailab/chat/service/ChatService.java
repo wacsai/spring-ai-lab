@@ -12,6 +12,10 @@ public class ChatService {
         this.chatClient = chatClientBuilder.build();
     }
 
+
+    /**
+     * 调用chatClient进行对话
+     */
     public String chat(String message) {
         String content = chatClient.prompt()
                 .user(message)

@@ -3,12 +3,11 @@ package com.yytnet.fms.ailab.chat.controller;
 import com.yytnet.fms.ailab.chat.dto.req.ChatReq;
 import com.yytnet.fms.ailab.chat.dto.resp.ChatResp;
 import com.yytnet.fms.ailab.chat.service.ChatService;
-import org.springframework.http.HttpStatus;
+import jakarta.validation.Valid;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
-import org.springframework.web.server.ResponseStatusException;
 
 @RestController
 @RequestMapping("/api/ai")
@@ -21,11 +20,7 @@ public class ChatController {
     }
 
     @PostMapping("/chat")
-    public ChatResp chat(@RequestBody ChatReq req) {
-        if (req == null || req.message() == null || req.message().isBlank()) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "message must not be blank");
-        }
-
+    public ChatResp chat(@Valid @RequestBody ChatReq req) {
         return new ChatResp(chatService.chat(req.message()));
     }
 
