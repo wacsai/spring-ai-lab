@@ -2,6 +2,7 @@ package com.yytnet.fms.ailab.chat.service;
 
 import com.yytnet.fms.ailab.chat.dto.req.ChatReq;
 import org.springframework.ai.chat.client.ChatClient;
+import org.springframework.ai.chat.client.advisor.SimpleLoggerAdvisor;
 import org.springframework.ai.ollama.api.OllamaChatOptions;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
@@ -9,6 +10,11 @@ import reactor.core.publisher.Flux;
 
 @Service
 public class ChatService {
+
+    // 最基础的 Advisor：在 ChatClient 调用前后记录请求和响应，帮助理解 Advisor Chain 的执行位置。
+    private static final SimpleLoggerAdvisor SIMPLE_LOGGER_ADVISOR = SimpleLoggerAdvisor.builder()
+            .order(0)
+            .build();
 
     // 系统提示词用于定义模型的长期角色和回答边界，用户输入只负责表达本次问题。
     private static final String SYSTEM_PROMPT_TEMPLATE = """
@@ -58,7 +64,7 @@ public class ChatService {
     }
 
     /**
-     * 构建一次 ChatClient 请求。普通调用和流式调用共用这里，保证 prompt/options 行为一致。
+     * 构建一次 ChatClient 请求。普通调用和流式调用共用这里，保证 prompt/options/advisors 行为一致。
      */
     private ChatClient.ChatClientRequestSpec buildRequestSpec(ChatReq req) {
         // 构建 ChatClientRequestSpec
@@ -66,7 +72,9 @@ public class ChatService {
                 .system(system -> system
                         .text(SYSTEM_PROMPT_TEMPLATE)
                         .param("customSystemPrompt", resolveCustomSystemPrompt(req.systemPrompt())))
-                .user(req.msg());
+                .user(req.msg())
+                // Advisor 是挂在 ChatClient 调用链上的横切能力，后续 Memory / RAG / Tool Calling 都会用类似方式接入。
+                .advisors(SIMPLE_LOGGER_ADVISOR);
 
         // 构建 OllamaChatOptions 构建器
         OllamaChatOptions.Builder optionsBuilder = OllamaChatOptions.builder()

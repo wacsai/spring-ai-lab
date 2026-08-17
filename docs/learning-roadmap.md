@@ -2,7 +2,7 @@
 
 ## Current Baseline
 
-当前仓库已完成 Phase 1A、Phase 1B 和 Phase 1C。
+当前仓库已完成 Phase 1A、Phase 1B、Phase 1C 和 Advisors 基础。
 
 ```text
 POST /api/ai/chat
@@ -14,6 +14,8 @@ ChatService
 ChatClient
 ↓
 System Prompt + User Prompt + Model Options
+↓
+SimpleLoggerAdvisor
 ↓
 call() / stream()
 ↓

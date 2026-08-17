@@ -106,7 +106,7 @@ Spring AI 负责：
 
 当前真实状态：
 
-**Spring AI Stage 1C: Streaming 已完成**
+**Spring AI Advisors 基础已完成**
 
 当前代码已经从 Controller demo 推进到基础 AI 调用链：
 
@@ -121,6 +121,8 @@ ChatClient
 ↓
 System Prompt + User Prompt + Model Options
 ↓
+SimpleLoggerAdvisor
+↓
 call() / stream()
 ↓
 Spring AI Ollama
@@ -131,7 +133,7 @@ qwen3.5:4b
 当前已完成：
 
 ```text
-代码结构 + 编译验证 + 真实接口调用验证 + System Prompt + 请求级 Model Options + Streaming
+代码结构 + 编译验证 + 真实接口调用验证 + System Prompt + 请求级 Model Options + Streaming + SimpleLoggerAdvisor
 ```
 
 已验证：

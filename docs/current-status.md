@@ -20,6 +20,8 @@ Last Updated: 2026-08-17
 - [x] 已通过全局异常处理返回字段级校验错误消息
 - [x] 已提供 `POST /api/ai/chat/stream`
 - [x] 已通过 SSE 验证流式输出
+- [x] 已挂载 `SimpleLoggerAdvisor`
+- [x] 已验证普通调用和流式调用均输出 Advisor 请求/响应日志
 
 ### GPU / Docker
 
@@ -48,7 +50,7 @@ Last Updated: 2026-08-17
 
 ## Current Stage
 
-**Spring AI Stage 1C: Streaming 已完成**
+**Spring AI Advisors 基础已完成**
 
 当前真实状态：
 
@@ -63,6 +65,8 @@ ChatClient
 ↓
 System Prompt + User Prompt + Model Options
 ↓
+SimpleLoggerAdvisor
+↓
 call() / stream()
 ↓
 Spring AI Ollama
@@ -70,27 +74,27 @@ Spring AI Ollama
 qwen3.5:4b
 ```
 
-当前代码已经完成最小闭环、System Prompt 模板、请求级模型参数覆盖、普通调用、流式调用、编译验证和真实接口调用验证。
+当前代码已经完成最小闭环、System Prompt 模板、请求级模型参数覆盖、普通调用、流式调用、基础 Advisor 挂载、编译验证和真实接口调用验证。
 
 ## Next Task
 
-进入 **Advisors 基础**：
+进入 **Structured Output**：
 
 ```text
-Advisor Chain
-→ SimpleLoggerAdvisor
-→ 后续 Tool Calling / RAG / Memory 的公共挂载方式
+Prompt
+→ 模型输出结构化 JSON
+→ Java Record / DTO
+→ 输出校验与失败处理
 ```
 
 验收标准：
 
-- 可以解释 Advisor 与普通 Service 调用的区别
-- 普通聊天接口可以挂载一个基础日志 Advisor
-- 不提前实现 Tool Calling / RAG / Memory
+- 可以让模型返回可反序列化的 Java 对象
+- 可以处理 JSON 反序列化失败
+- 不提前进入 Tool Calling / RAG / Memory
 
 ## Pending
 
-- [ ] Advisors 基础
 - [ ] Structured Output
 - [ ] Tool Calling
 - [ ] Embedding
