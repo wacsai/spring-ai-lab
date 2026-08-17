@@ -2,7 +2,7 @@
 
 ## Current Baseline
 
-当前仓库已完成 Phase 1A 和 Phase 1B。
+当前仓库已完成 Phase 1A、Phase 1B 和 Phase 1C。
 
 ```text
 POST /api/ai/chat
@@ -15,6 +15,8 @@ ChatClient
 ↓
 System Prompt + User Prompt + Model Options
 ↓
+call() / stream()
+↓
 Ollama qwen3.5:4b
 ```
 
@@ -26,6 +28,11 @@ Ollama qwen3.5:4b
 - `topP`
 - `topK`
 - `numPredict`
+
+当前接口：
+
+- `POST /api/ai/chat`
+- `POST /api/ai/chat/stream`
 
 后续按阶段推进，每个阶段只完成一个明确能力，并保持可运行、可验证。
 

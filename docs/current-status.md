@@ -18,6 +18,8 @@ Last Updated: 2026-08-17
 - [x] 已支持请求级 `temperature` / `topP` / `topK` / `numPredict`
 - [x] 已完成请求级参数校验
 - [x] 已通过全局异常处理返回字段级校验错误消息
+- [x] 已提供 `POST /api/ai/chat/stream`
+- [x] 已通过 SSE 验证流式输出
 
 ### GPU / Docker
 
@@ -46,7 +48,7 @@ Last Updated: 2026-08-17
 
 ## Current Stage
 
-**Spring AI Stage 1B: ChatClient / Prompt / Model Options 已完成**
+**Spring AI Stage 1C: Streaming 已完成**
 
 当前真实状态：
 
@@ -61,32 +63,33 @@ ChatClient
 ↓
 System Prompt + User Prompt + Model Options
 ↓
+call() / stream()
+↓
 Spring AI Ollama
 ↓
 qwen3.5:4b
 ```
 
-当前代码已经完成最小闭环、System Prompt 模板、请求级模型参数覆盖、编译验证和真实接口调用验证。
+当前代码已经完成最小闭环、System Prompt 模板、请求级模型参数覆盖、普通调用、流式调用、编译验证和真实接口调用验证。
 
 ## Next Task
 
-进入 **Phase 1C - Streaming**：
+进入 **Advisors 基础**：
 
 ```text
-ChatClient.stream()
-→ SSE
-→ 客户端逐段接收模型输出
+Advisor Chain
+→ SimpleLoggerAdvisor
+→ 后续 Tool Calling / RAG / Memory 的公共挂载方式
 ```
 
 验收标准：
 
-- 提供一个流式聊天接口
-- 客户端可以逐段收到模型输出
-- 普通调用与流式调用边界清晰
+- 可以解释 Advisor 与普通 Service 调用的区别
+- 普通聊天接口可以挂载一个基础日志 Advisor
+- 不提前实现 Tool Calling / RAG / Memory
 
 ## Pending
 
-- [ ] Phase 1C: Streaming
 - [ ] Advisors 基础
 - [ ] Structured Output
 - [ ] Tool Calling

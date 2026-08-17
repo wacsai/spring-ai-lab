@@ -5,6 +5,7 @@ import org.springframework.ai.chat.client.ChatClient;
 import org.springframework.ai.ollama.api.OllamaChatOptions;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
+import reactor.core.publisher.Flux;
 
 @Service
 public class ChatService {
@@ -36,6 +37,30 @@ public class ChatService {
      * @return 聊天内容
      */
     public String chat(ChatReq req) {
+        // 普通调用会等待模型完整生成后，一次性返回最终文本。
+        String content = buildRequestSpec(req)
+                .call()
+                .content();
+        return content == null ? "" : content;
+    }
+
+    /**
+     * 流式聊天
+     *
+     * @param req 请求参数
+     * @return 模型逐段生成的文本片段
+     */
+    public Flux<String> stream(ChatReq req) {
+        // 流式调用会在模型生成过程中持续返回文本片段，适合聊天界面和较长回答。
+        return buildRequestSpec(req)
+                .stream()
+                .content();
+    }
+
+    /**
+     * 构建一次 ChatClient 请求。普通调用和流式调用共用这里，保证 prompt/options 行为一致。
+     */
+    private ChatClient.ChatClientRequestSpec buildRequestSpec(ChatReq req) {
         // 构建 ChatClientRequestSpec
         ChatClient.ChatClientRequestSpec requestSpec = chatClient.prompt()
                 .system(system -> system
@@ -49,18 +74,14 @@ public class ChatService {
                 .model(model)
                 // qwen thinking 输出可能不会进入 content；当前阶段先关闭，保证接口稳定返回文本。
                 .disableThinking();
-        
+
         // 应用请求参数到 OllamaChatOptions 中
         boolean hasOptions = applyOptions(req, optionsBuilder);
         if (hasOptions) {
             requestSpec = requestSpec.options(optionsBuilder);
         }
 
-        // 调用聊天接口
-        String content = requestSpec
-                .call()
-                .content();
-        return content == null ? "" : content;
+        return requestSpec;
     }
 
     /**
