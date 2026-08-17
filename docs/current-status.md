@@ -1,6 +1,6 @@
 # Current Status
 
-Last Updated: 2026-08-17
+Last Updated: 2026-08-18
 
 ## Completed
 
@@ -25,6 +25,11 @@ Last Updated: 2026-08-17
 - [x] 已提供 `POST /api/ai/structured/movie/extract`
 - [x] 已验证 `.entity(MovieExtractResp.class)` 结构化输出
 - [x] 已处理非电影输入、字段缺失归一化和结构化输出失败响应
+- [x] 已提供 `POST /api/ai/tool/chat`
+- [x] 已通过 `@Tool` 暴露只读学习进度查询工具
+- [x] 已在 ChatClient 请求中注册 Java Tool
+- [x] 已通过真实接口验证模型生成 `toolCalls` 并收到 `ToolResponseMessage`
+- [x] 已提供 Tool Calling 失败的统一错误响应
 
 ### GPU / Docker
 
@@ -53,52 +58,56 @@ Last Updated: 2026-08-17
 
 ## Current Stage
 
-**Spring AI Structured Output 已完成**
+**Spring AI Tool Calling 基础已完成**
 
 当前真实状态：
 
 ```text
 Client
 ↓
-ChatController
+ToolCallingController
 ↓
-ChatService
+ToolCallingService
 ↓
 ChatClient
 ↓
-System Prompt + User Prompt + Model Options
+System Prompt + User Prompt + Model Options + Java Tool
 ↓
 SimpleLoggerAdvisor
 ↓
-call() / stream()
+call()
+↓
+Spring AI Tool Calling
+↓
+LearningProgressTool#getSpringAiLearningProgress
 ↓
 Spring AI Ollama
 ↓
 qwen3.5:4b
 ```
 
-当前代码已经完成最小闭环、System Prompt 模板、请求级模型参数覆盖、普通调用、流式调用、基础 Advisor 挂载、结构化输出、编译验证和真实接口调用验证。
+当前代码已经完成最小闭环、System Prompt 模板、请求级模型参数覆盖、普通调用、流式调用、基础 Advisor 挂载、结构化输出、Tool Calling 基础接口、编译验证和真实接口调用验证。
 
 ## Next Task
 
-进入 **Tool Calling**：
+进入 **Embedding**：
 
 ```text
-Prompt
-→ 模型决定是否调用 Java Tool
-→ Tool 返回结果
-→ 模型基于工具结果回答
+Text
+→ EmbeddingModel
+→ Vector
+→ Similarity
 ```
 
 验收标准：
 
-- 至少提供一个只读、安全、可重复验证的工具
-- 模型可以根据用户问题决定是否调用工具
-- 工具执行失败时有明确错误返回
+- 选定一个 Embedding 模型
+- 记录向量维度
+- 提供最小文本向量化接口
+- 可以解释 Chat Model 和 Embedding Model 的区别
 
 ## Pending
 
-- [ ] Tool Calling
 - [ ] Embedding
 - [ ] PostgreSQL + pgvector
 - [ ] RAG

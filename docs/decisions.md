@@ -144,3 +144,41 @@ POST /api/ai/structured/movie/extract
 - `POST /api/ai/chat` 继续返回自然语言文本。
 - `POST /api/ai/structured/movie/extract` 返回 Java record 可直接表达的结构化结果。
 - 当前阶段不提前抽象多模型 Provider 的通用结构化输出层。
+
+---
+
+## ADR-007: Tool Calling 先使用只读学习进度工具
+
+Status: Accepted
+
+### Decision
+
+Tool Calling 阶段新增独立接口：
+
+```text
+POST /api/ai/tool/chat
+```
+
+该接口通过 `ChatClient.tools(learningProgressTool)` 注册一个带 `@Tool` 注解的 Java 本地方法：
+
+```text
+LearningProgressTool#getSpringAiLearningProgress
+```
+
+### Reason
+
+- 当前目标是先理解模型选择工具、Spring AI 执行 Java 方法、模型基于工具结果回答的基本链路。
+- 学习进度查询是只读、无副作用、可重复验证的工具，适合作为第一个 Tool Calling demo。
+- 暂不接入数据库、订单、服务器状态等真实业务能力，避免把 Tool Calling 和后续业务集成复杂度混在一起。
+
+### Alternatives
+
+- 直接接入数据库查询工具
+- 直接接入 Linux / Docker / GPU 状态工具
+- 在原 `POST /api/ai/chat` 中直接注册工具
+
+### Impact
+
+- `POST /api/ai/chat` 继续保持普通聊天职责。
+- `POST /api/ai/tool/chat` 专门用于学习 Tool Calling。
+- 后续真实业务工具可以按相同模式扩展，但需要增加权限边界、参数校验、审计日志和失败处理。

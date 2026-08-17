@@ -48,4 +48,13 @@ public class GlobalExceptionHandler {
         return ResponseEntity.status(HttpStatus.UNPROCESSABLE_CONTENT)
                 .body(new ErrorResp(HttpStatus.UNPROCESSABLE_CONTENT.value(), ex.getMessage(), List.of()));
     }
+
+    /**
+     * 处理模型工具调用失败异常
+     */
+    @ExceptionHandler(AiToolCallingException.class)
+    public ResponseEntity<ErrorResp> handleAiToolCallingException(AiToolCallingException ex) {
+        return ResponseEntity.status(HttpStatus.BAD_GATEWAY)
+                .body(new ErrorResp(HttpStatus.BAD_GATEWAY.value(), ex.getMessage(), List.of()));
+    }
 }

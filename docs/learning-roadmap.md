@@ -2,7 +2,7 @@
 
 ## Current Baseline
 
-当前仓库已完成 Phase 1A、Phase 1B、Phase 1C、Advisors 基础和 Structured Output。
+当前仓库已完成 Phase 1A、Phase 1B、Phase 1C、Advisors 基础、Structured Output 和 Tool Calling 基础。
 
 ```text
 POST /api/ai/chat
@@ -36,6 +36,7 @@ Ollama qwen3.5:4b
 - `POST /api/ai/chat`
 - `POST /api/ai/chat/stream`
 - `POST /api/ai/structured/movie/extract`
+- `POST /api/ai/tool/chat`
 
 后续按阶段推进，每个阶段只完成一个明确能力，并保持可运行、可验证。
 
@@ -167,6 +168,13 @@ POST /api/ai/chat
 - 至少提供一个只读、安全、可重复验证的工具
 - 模型可以根据用户问题决定是否调用工具
 - 工具执行失败时有明确错误返回
+
+当前实现：
+
+- 使用 `@Tool` 暴露 `LearningProgressTool#getSpringAiLearningProgress`
+- 使用 `ChatClient.tools(learningProgressTool)` 在请求级注册工具
+- 提供 `POST /api/ai/tool/chat`
+- 当前工具只读，不访问数据库、不写文件、不调用外部系统
 
 ## Phase 5 - Embedding
 
