@@ -17,6 +17,7 @@ Last Updated: 2026-08-17
 - [x] 已支持 System Prompt 模板
 - [x] 已支持请求级 `temperature` / `topP` / `topK` / `numPredict`
 - [x] 已完成请求级参数校验
+- [x] 已通过全局异常处理返回字段级校验错误消息
 
 ### GPU / Docker
 
