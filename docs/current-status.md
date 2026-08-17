@@ -22,6 +22,9 @@ Last Updated: 2026-08-17
 - [x] 已通过 SSE 验证流式输出
 - [x] 已挂载 `SimpleLoggerAdvisor`
 - [x] 已验证普通调用和流式调用均输出 Advisor 请求/响应日志
+- [x] 已提供 `POST /api/ai/structured/movie/extract`
+- [x] 已验证 `.entity(MovieExtractResp.class)` 结构化输出
+- [x] 已处理非电影输入、字段缺失归一化和结构化输出失败响应
 
 ### GPU / Docker
 
@@ -50,7 +53,7 @@ Last Updated: 2026-08-17
 
 ## Current Stage
 
-**Spring AI Advisors 基础已完成**
+**Spring AI Structured Output 已完成**
 
 当前真实状态：
 
@@ -74,28 +77,27 @@ Spring AI Ollama
 qwen3.5:4b
 ```
 
-当前代码已经完成最小闭环、System Prompt 模板、请求级模型参数覆盖、普通调用、流式调用、基础 Advisor 挂载、编译验证和真实接口调用验证。
+当前代码已经完成最小闭环、System Prompt 模板、请求级模型参数覆盖、普通调用、流式调用、基础 Advisor 挂载、结构化输出、编译验证和真实接口调用验证。
 
 ## Next Task
 
-进入 **Structured Output**：
+进入 **Tool Calling**：
 
 ```text
 Prompt
-→ 模型输出结构化 JSON
-→ Java Record / DTO
-→ 输出校验与失败处理
+→ 模型决定是否调用 Java Tool
+→ Tool 返回结果
+→ 模型基于工具结果回答
 ```
 
 验收标准：
 
-- 可以让模型返回可反序列化的 Java 对象
-- 可以处理 JSON 反序列化失败
-- 不提前进入 Tool Calling / RAG / Memory
+- 至少提供一个只读、安全、可重复验证的工具
+- 模型可以根据用户问题决定是否调用工具
+- 工具执行失败时有明确错误返回
 
 ## Pending
 
-- [ ] Structured Output
 - [ ] Tool Calling
 - [ ] Embedding
 - [ ] PostgreSQL + pgvector

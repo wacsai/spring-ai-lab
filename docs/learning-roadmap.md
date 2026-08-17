@@ -2,7 +2,7 @@
 
 ## Current Baseline
 
-当前仓库已完成 Phase 1A、Phase 1B、Phase 1C 和 Advisors 基础。
+当前仓库已完成 Phase 1A、Phase 1B、Phase 1C、Advisors 基础和 Structured Output。
 
 ```text
 POST /api/ai/chat
@@ -35,6 +35,7 @@ Ollama qwen3.5:4b
 
 - `POST /api/ai/chat`
 - `POST /api/ai/chat/stream`
+- `POST /api/ai/structured/movie/extract`
 
 后续按阶段推进，每个阶段只完成一个明确能力，并保持可运行、可验证。
 

@@ -39,4 +39,13 @@ public class GlobalExceptionHandler {
         return ResponseEntity.badRequest()
                 .body(new ErrorResp(HttpStatus.BAD_REQUEST.value(), "请求体格式不正确", List.of()));
     }
+
+    /**
+     * 处理模型结构化输出失败异常
+     */
+    @ExceptionHandler(AiStructuredOutputException.class)
+    public ResponseEntity<ErrorResp> handleAiStructuredOutputException(AiStructuredOutputException ex) {
+        return ResponseEntity.status(HttpStatus.UNPROCESSABLE_CONTENT)
+                .body(new ErrorResp(HttpStatus.UNPROCESSABLE_CONTENT.value(), ex.getMessage(), List.of()));
+    }
 }

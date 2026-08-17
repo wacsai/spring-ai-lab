@@ -106,7 +106,7 @@ Spring AI 负责：
 
 当前真实状态：
 
-**Spring AI Advisors 基础已完成**
+**Spring AI Structured Output 已完成**
 
 当前代码已经从 Controller demo 推进到基础 AI 调用链：
 
@@ -133,7 +133,7 @@ qwen3.5:4b
 当前已完成：
 
 ```text
-代码结构 + 编译验证 + 真实接口调用验证 + System Prompt + 请求级 Model Options + Streaming + SimpleLoggerAdvisor
+代码结构 + 编译验证 + 真实接口调用验证 + System Prompt + 请求级 Model Options + Streaming + SimpleLoggerAdvisor + Structured Output
 ```
 
 已验证：
@@ -147,6 +147,10 @@ POST /api/ai/chat
 POST /api/ai/chat/stream
 → SSE
 → 逐段返回模型输出
+
+POST /api/ai/structured/movie/extract
+→ MovieExtractResp
+→ 返回电影信息提取结构化对象
 ```
 
 当前接口支持：
@@ -158,6 +162,12 @@ temperature
 topP
 topK
 numPredict
+```
+
+当前结构化输出接口：
+
+```text
+POST /api/ai/structured/movie/extract
 ```
 
 目标链路：

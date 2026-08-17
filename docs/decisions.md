@@ -116,3 +116,31 @@ REST API
 - 每个阶段只引入当前阶段必需的依赖和配置。
 - 每完成一个阶段更新 `docs/current-status.md`。
 - 后续阶段可以预留包结构或接口，但不提前大规模实现。
+
+---
+
+## ADR-006: Structured Output 使用固定任务接口
+
+Status: Accepted
+
+### Decision
+
+Structured Output 阶段不改造开放聊天接口，而是新增固定任务接口：
+
+```text
+POST /api/ai/structured/movie/extract
+```
+
+该接口只负责从自然语言文本中提取电影信息，并返回 `MovieExtractResp`。
+
+### Reason
+
+- Structured Output 适合业务目标明确、输出结构固定的任务。
+- 开放聊天问题是随机的，不应强行套入电影对象。
+- `MovieExtractResp` 使用 `movieRelated` 表达输入是否与电影信息相关，避免非电影输入时硬编字段。
+
+### Impact
+
+- `POST /api/ai/chat` 继续返回自然语言文本。
+- `POST /api/ai/structured/movie/extract` 返回 Java record 可直接表达的结构化结果。
+- 当前阶段不提前抽象多模型 Provider 的通用结构化输出层。
