@@ -76,12 +76,9 @@ public class ChatService {
                 .disableThinking();
 
         // 应用请求参数到 OllamaChatOptions 中
-        boolean hasOptions = applyOptions(req, optionsBuilder);
-        if (hasOptions) {
-            requestSpec = requestSpec.options(optionsBuilder);
-        }
+        applyOptions(req, optionsBuilder);
 
-        return requestSpec;
+        return requestSpec.options(optionsBuilder);
     }
 
     /**
@@ -89,34 +86,25 @@ public class ChatService {
      *
      * @param req            请求参数
      * @param optionsBuilder OllamaChatOptions 构建器
-     * @return 是否应用了请求参数
      */
-    private boolean applyOptions(ChatReq req, OllamaChatOptions.Builder optionsBuilder) {
+    private void applyOptions(ChatReq req, OllamaChatOptions.Builder optionsBuilder) {
         // 只设置调用方传入的参数；未传的参数继续使用 application.yaml 中的默认配置。
-        boolean hasOptions = false;
-
         // 设置温度
         if (req.temperature() != null) {
             optionsBuilder.temperature(req.temperature());
-            hasOptions = true;
         }
         // 设置 topP
         if (req.topP() != null) {
             optionsBuilder.topP(req.topP());
-            hasOptions = true;
         }
         // 设置 topK
         if (req.topK() != null) {
             optionsBuilder.topK(req.topK());
-            hasOptions = true;
         }
         // 设置 numPredict
         if (req.numPredict() != null) {
             optionsBuilder.numPredict(req.numPredict());
-            hasOptions = true;
         }
-
-        return hasOptions;
     }
 
     /**
