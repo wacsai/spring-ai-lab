@@ -154,7 +154,7 @@ POST /api/ai/structured/movie/extract
 
 POST /api/ai/tool/chat
 → ChatClient 注册 Java Tool
-→ 模型按需调用 LearningProgressTool
+→ 模型按需调用 LearningProgressTool 或 OrderStatusTool
 → 基于工具结果返回回答
 ```
 
@@ -179,6 +179,16 @@ POST /api/ai/structured/movie/extract
 
 ```text
 POST /api/ai/tool/chat
+```
+
+当前 Tool Calling 已验证：
+
+```text
+用户问题包含订单号 A1001
+→ 模型生成 toolCalls: getOrderStatus({"orderNo":"A1001"})
+→ Spring AI 执行 OrderStatusTool#getOrderStatus
+→ ToolResponseMessage 带回订单状态
+→ 模型生成最终回答
 ```
 
 目标链路：

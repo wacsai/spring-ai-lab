@@ -113,6 +113,8 @@
                 <configuration>
                     <release>${java.version}</release>
                     <encoding>${project.build.sourceEncoding}</encoding>
+                    <!-- Tool Calling 需要保留方法参数名，Spring AI 才能把 orderNo 这类参数名生成到工具 schema 中。 -->
+                    <parameters>true</parameters>
                 </configuration>
             </plugin>
             <!-- package -->

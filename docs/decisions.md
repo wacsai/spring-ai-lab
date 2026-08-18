@@ -182,3 +182,31 @@ LearningProgressTool#getSpringAiLearningProgress
 - `POST /api/ai/chat` 继续保持普通聊天职责。
 - `POST /api/ai/tool/chat` 专门用于学习 Tool Calling。
 - 后续真实业务工具可以按相同模式扩展，但需要增加权限边界、参数校验、审计日志和失败处理。
+
+---
+
+## ADR-008: Tool Calling 使用内存订单工具学习参数提取
+
+Status: Accepted
+
+### Decision
+
+在 `POST /api/ai/tool/chat` 中继续注册第二个只读工具：
+
+```text
+OrderStatusTool#getOrderStatus(orderNo)
+```
+
+该工具通过 `@ToolParam` 声明 `orderNo` 参数，并使用内存 `Map` 模拟订单数据。
+
+### Reason
+
+- 无参数 Tool 只能证明模型可以调用 Java 方法，不能证明模型可以从用户问题中提取参数。
+- 企业业务 Tool 通常都需要参数，例如订单号、用户 ID、时间范围、商品编码。
+- 使用内存订单数据可以聚焦学习 `@ToolParam`、`toolCalls.arguments` 和 ToolResponseMessage，不提前引入数据库。
+
+### Impact
+
+- 当前 Tool Calling 阶段已覆盖无参数工具和带参数工具。
+- `pom.xml` 中 Maven Compiler 开启 `parameters=true`，用于保留 Java 方法参数名，方便 Spring AI 生成工具参数 schema。
+- 后续接入真实订单、数据库或外部 API 时，可以沿用该模式，但必须补充权限校验、参数校验和审计日志。

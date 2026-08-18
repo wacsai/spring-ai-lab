@@ -172,9 +172,11 @@ POST /api/ai/chat
 当前实现：
 
 - 使用 `@Tool` 暴露 `LearningProgressTool#getSpringAiLearningProgress`
-- 使用 `ChatClient.tools(learningProgressTool)` 在请求级注册工具
+- 使用 `@ToolParam` 暴露 `OrderStatusTool#getOrderStatus(orderNo)` 的订单号参数
+- 使用 `ChatClient.tools(learningProgressTool, orderStatusTool)` 在请求级注册工具
 - 提供 `POST /api/ai/tool/chat`
 - 当前工具只读，不访问数据库、不写文件、不调用外部系统
+- 已验证模型可以从用户问题中提取 `orderNo` 并生成 `arguments`
 
 ## Phase 5 - Embedding
 

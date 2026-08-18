@@ -27,8 +27,10 @@ Last Updated: 2026-08-18
 - [x] 已处理非电影输入、字段缺失归一化和结构化输出失败响应
 - [x] 已提供 `POST /api/ai/tool/chat`
 - [x] 已通过 `@Tool` 暴露只读学习进度查询工具
+- [x] 已通过 `@ToolParam` 暴露带参数订单状态查询工具
 - [x] 已在 ChatClient 请求中注册 Java Tool
 - [x] 已通过真实接口验证模型生成 `toolCalls` 并收到 `ToolResponseMessage`
+- [x] 已通过真实接口验证模型可以从用户问题中提取 `orderNo` 并传入 Java Tool
 - [x] 已提供 Tool Calling 失败的统一错误响应
 
 ### GPU / Docker
@@ -79,14 +81,14 @@ call()
 ↓
 Spring AI Tool Calling
 ↓
-LearningProgressTool#getSpringAiLearningProgress
+LearningProgressTool#getSpringAiLearningProgress / OrderStatusTool#getOrderStatus(orderNo)
 ↓
 Spring AI Ollama
 ↓
 qwen3.5:4b
 ```
 
-当前代码已经完成最小闭环、System Prompt 模板、请求级模型参数覆盖、普通调用、流式调用、基础 Advisor 挂载、结构化输出、Tool Calling 基础接口、编译验证和真实接口调用验证。
+当前代码已经完成最小闭环、System Prompt 模板、请求级模型参数覆盖、普通调用、流式调用、基础 Advisor 挂载、结构化输出、Tool Calling 基础接口、带参数 Tool、编译验证和真实接口调用验证。
 
 ## Next Task
 

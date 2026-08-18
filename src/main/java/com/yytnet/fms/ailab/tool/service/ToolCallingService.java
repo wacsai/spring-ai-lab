@@ -23,19 +23,24 @@ public class ToolCallingService {
             - 先给结论，再给必要解释
             - 当前接口用于学习 Spring AI Tool Calling
             - 当用户询问当前学习进度、已完成内容、当前阶段、下一步学习内容时，必须调用工具获取真实结果，不要凭记忆回答
+            - 当用户询问订单状态、物流、发货、签收、付款情况，并且提供了订单号时，必须调用订单查询工具
+            - 如果用户想查订单但没有提供订单号，先要求用户补充订单号
             - 如果问题不需要工具，直接回答即可
             - 如果使用了工具结果，回答末尾必须包含一行：数据来源：工具返回的 source 字段
             """;
 
     private final ChatClient chatClient;
     private final LearningProgressTool learningProgressTool;
+    private final OrderStatusTool orderStatusTool;
     private final String model;
 
     public ToolCallingService(ChatClient.Builder chatClientBuilder,
                               LearningProgressTool learningProgressTool,
+                              OrderStatusTool orderStatusTool,
                               @Value("${spring.ai.ollama.chat.model}") String model) {
         this.chatClient = chatClientBuilder.build();
         this.learningProgressTool = learningProgressTool;
+        this.orderStatusTool = orderStatusTool;
         this.model = model;
     }
 
@@ -45,8 +50,8 @@ public class ToolCallingService {
                     .system(SYSTEM_PROMPT)
                     .user(req.msg())
                     // tools(...) 把带有 @Tool 方法的对象注册到本次请求中。
-                    // Spring AI 会把工具名、描述、参数 schema 发给模型；模型决定是否调用。
-                    .tools(learningProgressTool)
+                    // Spring AI 会把工具名、描述、参数 schema 发给模型；模型决定调用哪个工具，以及传什么参数。
+                    .tools(learningProgressTool, orderStatusTool)
                     .advisors(SIMPLE_LOGGER_ADVISOR)
                     .options(buildOptions(req))
                     .call()
