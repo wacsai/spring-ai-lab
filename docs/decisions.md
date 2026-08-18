@@ -305,16 +305,21 @@ ai_document_embedding.embedding vector(2560)
 
 ---
 
-## ADR-011: pgvector 最小检索先使用 JPA 原生 SQL
+## ADR-011: pgvector 最小检索使用 JPA 原生 SQL 和 @Query
 
 Status: Accepted
 
 ### Decision
 
-向量入库和相似度检索先使用 Spring Data JPA 提供的 `EntityManager` 执行原生 SQL：
+向量入库先使用 Spring Data JPA 提供的 `EntityManager` 执行原生 SQL：
 
 ```text
 INSERT ... CAST(:embedding AS vector)
+```
+
+相似度检索使用 Spring Data JPA Repository 的 `@Query(nativeQuery = true)`：
+
+```text
 ORDER BY embedding <=> CAST(:queryEmbedding AS vector)
 ```
 
@@ -328,8 +333,9 @@ POST /api/ai/vector/search
 ### Reason
 
 - 当前目标是先跑通 Embedding + pgvector 的最小闭环。
-- Hibernate 对 pgvector 字段的实体类型映射会引入额外学习成本，当前阶段暂不深入。
-- JPA 原生 SQL 仍然保留在 Spring/JPA 事务和 Repository 分层内，同时能直接使用 pgvector 操作符。
+- 插入需要 `INSERT ... RETURNING id`，用 `EntityManager` 更直接。
+- 检索是标准查询，适合使用 `@Query(nativeQuery = true)` 和 interface projection。
+- 当前阶段暂不深入 Hibernate 对 pgvector 字段的实体类型映射。
 
 ### Impact
 

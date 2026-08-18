@@ -44,6 +44,8 @@ Last Updated: 2026-08-18
 - [x] 已提供 `POST /api/ai/vector/documents`
 - [x] 已提供 `POST /api/ai/vector/search`
 - [x] 已实现 Embedding + pgvector 精确相似度检索代码
+- [x] 已将 pgvector 相似度检索改为 Spring Data JPA `@Query(nativeQuery = true)`
+- [x] 已验证 `@Query` 检索接口可返回语义相近文档
 
 ### GPU / Docker
 
@@ -98,7 +100,7 @@ ai_document_embedding
 
 当前代码已经完成最小闭环、System Prompt 模板、请求级模型参数覆盖、普通调用、流式调用、基础 Advisor 挂载、结构化输出、Tool Calling 基础接口、带参数 Tool、Embedding 最小接口、JPA/PostgreSQL 依赖接入、pgvector 初始化脚本、文档向量入库接口和精确相似度检索接口。
 
-当前数据库配置已启动到执行 schema 阶段；`vector(2560)` 字段可保留，但当前 pgvector HNSW 索引最多支持 2000 维，因此初始化脚本暂不创建 HNSW 索引。向量入库和检索代码已编译通过，尚未在本地数据库插入示例数据验证。
+当前数据库配置已启动到执行 schema 阶段；`vector(2560)` 字段可保留，但当前 pgvector HNSW 索引最多支持 2000 维，因此初始化脚本暂不创建 HNSW 索引。向量入库和检索代码已编译通过，检索接口已通过真实请求验证。
 
 ## Next Task
 
@@ -114,10 +116,9 @@ Text
 
 验收标准：
 
-- 存入少量文本及其 embedding
-- 提供最小相似度检索接口
-- 验证 `ORDER BY embedding <=> queryVector` 能返回语义相近文档
-- 再进入 RAG，将检索结果放入 Prompt 给 Chat Model 回答
+- 将检索结果放入 Prompt
+- 让 Chat Model 基于检索出的文档回答
+- 进入 RAG 最小闭环
 
 ## Pending
 

@@ -6,7 +6,8 @@ import com.yytnet.fms.ailab.vector.dto.req.VectorSearchReq;
 import com.yytnet.fms.ailab.vector.dto.resp.VectorDocumentCreateResp;
 import com.yytnet.fms.ailab.vector.dto.resp.VectorSearchItemResp;
 import com.yytnet.fms.ailab.vector.dto.resp.VectorSearchResp;
-import com.yytnet.fms.ailab.vector.repository.VectorDocumentRepository;
+import com.yytnet.fms.ailab.vector.repository.VectorDocumentCommandRepository;
+import com.yytnet.fms.ailab.vector.repository.VectorDocumentQueryRepository;
 import org.springframework.ai.embedding.EmbeddingModel;
 import org.springframework.stereotype.Service;
 
@@ -20,20 +21,23 @@ public class VectorDocumentService {
 
     private final EmbeddingModel embeddingModel;
     private final PgVectorLiteralConverter pgVectorLiteralConverter;
-    private final VectorDocumentRepository vectorDocumentRepository;
+    private final VectorDocumentCommandRepository vectorDocumentCommandRepository;
+    private final VectorDocumentQueryRepository vectorDocumentQueryRepository;
 
     public VectorDocumentService(EmbeddingModel embeddingModel,
                                  PgVectorLiteralConverter pgVectorLiteralConverter,
-                                 VectorDocumentRepository vectorDocumentRepository) {
+                                 VectorDocumentCommandRepository vectorDocumentCommandRepository,
+                                 VectorDocumentQueryRepository vectorDocumentQueryRepository) {
         this.embeddingModel = embeddingModel;
         this.pgVectorLiteralConverter = pgVectorLiteralConverter;
-        this.vectorDocumentRepository = vectorDocumentRepository;
+        this.vectorDocumentCommandRepository = vectorDocumentCommandRepository;
+        this.vectorDocumentQueryRepository = vectorDocumentQueryRepository;
     }
 
     public VectorDocumentCreateResp create(VectorDocumentCreateReq req) {
         try {
             float[] embedding = embedAndValidate(req.content());
-            Long id = vectorDocumentRepository.save(
+            Long id = vectorDocumentCommandRepository.save(
                     req.title(),
                     req.content(),
                     pgVectorLiteralConverter.toLiteral(embedding)
@@ -54,15 +58,15 @@ public class VectorDocumentService {
         try {
             int topK = req.topK() == null ? DEFAULT_TOP_K : req.topK();
             float[] queryEmbedding = embedAndValidate(req.query());
-            List<VectorSearchItemResp> results = vectorDocumentRepository
-                    .search(pgVectorLiteralConverter.toLiteral(queryEmbedding), topK)
+            List<VectorSearchItemResp> results = vectorDocumentQueryRepository
+                    .searchByCosineDistance(pgVectorLiteralConverter.toLiteral(queryEmbedding), topK)
                     .stream()
                     .map(row -> new VectorSearchItemResp(
-                            row.id(),
-                            row.title(),
-                            row.content(),
-                            row.distance(),
-                            toSimilarity(row.distance())
+                            row.getId(),
+                            row.getTitle(),
+                            row.getContent(),
+                            row.getDistance(),
+                            toSimilarity(row.getDistance())
                     ))
                     .toList();
 

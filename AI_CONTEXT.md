@@ -169,6 +169,7 @@ POST /api/ai/vector/documents
 
 POST /api/ai/vector/search
 → query 生成 embedding
+→ Spring Data JPA `@Query(nativeQuery = true)`
 → pgvector cosine distance `<=>`
 → 返回最相似文档
 ```
@@ -227,7 +228,7 @@ POST /api/ai/vector/documents
 POST /api/ai/vector/search
 ```
 
-说明：接口代码已编译通过，但尚未向本地数据库插入示例数据验证。
+说明：`POST /api/ai/vector/search` 已通过 `@Query(nativeQuery = true)` 真实接口验证。
 
 当前 Tool Calling 已验证：
 
