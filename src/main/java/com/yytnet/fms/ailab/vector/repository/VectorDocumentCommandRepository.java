@@ -14,6 +14,10 @@ public class VectorDocumentCommandRepository {
 
     @Transactional
     public Long save(String title, String content, String embeddingLiteral) {
+        // 这里没有使用 JpaRepository.save(entity)，是因为当前阶段暂不把 pgvector 字段映射成 Java 类型。
+        // embeddingLiteral 是 Java 字符串参数，例如 "[0.1,0.2,...]"。
+        // CAST(:embedding AS vector) 明确告诉 PostgreSQL：请把这个字符串参数按 pgvector 类型解析。
+        // RETURNING id 用来在插入成功后直接拿到数据库生成的主键，方便接口返回和后续 RAG 引用文档片段。
         Query query = entityManager.createNativeQuery("""
                 INSERT INTO ai_document_embedding (title, content, embedding)
                 VALUES (:title, :content, CAST(:embedding AS vector))

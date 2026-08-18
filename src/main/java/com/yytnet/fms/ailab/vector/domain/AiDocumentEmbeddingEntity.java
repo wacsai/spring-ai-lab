@@ -13,6 +13,9 @@ import java.time.OffsetDateTime;
 @Table(name = "ai_document_embedding")
 public class AiDocumentEmbeddingEntity {
 
+    // 这个 Entity 目前只用于 Spring Data JPA Repository 识别表和主键。
+    // 暂时不映射 embedding 列，是为了避免在学习阶段引入 Hibernate 自定义 pgvector 类型映射。
+    // 真正涉及 embedding 的写入和检索，都放在 native SQL 里通过 CAST(... AS vector) 完成。
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;

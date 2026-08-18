@@ -16,7 +16,12 @@ import java.util.List;
 @Service
 public class VectorDocumentService {
 
+    // 当前 qwen3-embedding:4b 已验证返回 2560 维向量。
+    // 表结构 ai_document_embedding.embedding 也是 vector(2560)，所以这里做一次维度保护：
+    // 如果以后更换 embedding 模型，这个值和 schema.sql 里的 vector 维度都需要一起调整。
     private static final int EXPECTED_DIMENSION = 2560;
+
+    // 用户不传 topK 时，默认只取最相似的 3 条文档，便于学习阶段观察返回结果。
     private static final int DEFAULT_TOP_K = 3;
 
     private final EmbeddingModel embeddingModel;
@@ -36,6 +41,10 @@ public class VectorDocumentService {
 
     public VectorDocumentCreateResp create(VectorDocumentCreateReq req) {
         try {
+            // 入库流程：
+            // 1. 先把原始 content 交给 EmbeddingModel，得到 float[] 向量。
+            // 2. 再把 float[] 转成 pgvector 可以识别的字符串字面量，例如 "[0.1,0.2,...]"。
+            // 3. 最后通过 Repository 执行原生 INSERT，把向量写入 PostgreSQL + pgvector。
             float[] embedding = embedAndValidate(req.content());
             Long id = vectorDocumentCommandRepository.save(
                     req.title(),
@@ -57,6 +66,10 @@ public class VectorDocumentService {
     public VectorSearchResp search(VectorSearchReq req) {
         try {
             int topK = req.topK() == null ? DEFAULT_TOP_K : req.topK();
+
+            // 检索流程和入库流程的前半段一致：
+            // 用户问题也要先变成同一个 embedding 模型生成的 2560 维向量。
+            // 只有“查询向量”和“文档向量”在同一个向量空间里，pgvector 的距离计算才有意义。
             float[] queryEmbedding = embedAndValidate(req.query());
             List<VectorSearchItemResp> results = vectorDocumentQueryRepository
                     .searchByCosineDistance(pgVectorLiteralConverter.toLiteral(queryEmbedding), topK)
@@ -83,8 +96,10 @@ public class VectorDocumentService {
     }
 
     private float[] embedAndValidate(String text) {
+        // EmbeddingModel 是 Spring AI 对“文本向量化模型”的抽象。
+        // 当前配置使用 Ollama 的 qwen3-embedding:4b；这里不会调用 Chat Model，也不会生成自然语言回答。
         float[] embedding = embeddingModel.embed(text);
-        if (embedding == null || embedding.length == 0) {
+        if (embedding.length == 0) {
             throw new AiVectorStoreException("模型返回了空的文本向量", null);
         }
         if (embedding.length != EXPECTED_DIMENSION) {
@@ -94,6 +109,8 @@ public class VectorDocumentService {
     }
 
     private double toSimilarity(double distance) {
+        // pgvector 的 <=> 返回 cosine distance：越小越相似。
+        // 为了接口展示更直观，这里临时换算成 similarity：越大越相似。
         return 1.0 - distance;
     }
 }
