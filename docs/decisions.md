@@ -302,3 +302,37 @@ ai_document_embedding.embedding vector(2560)
 - 如果本地库名、用户名或密码不同，需要修改 `SPRING_DATASOURCE_URL`、`SPRING_DATASOURCE_USERNAME`、`SPRING_DATASOURCE_PASSWORD` 或 `application.yaml`。
 - 后续可以在该表基础上实现最小文本入库和相似度检索。
 - 当前暂不创建 HNSW 索引，因为 `qwen3-embedding:4b` 是 2560 维，已超过当前 pgvector HNSW 索引 2000 维限制。
+
+---
+
+## ADR-011: pgvector 最小检索先使用 JPA 原生 SQL
+
+Status: Accepted
+
+### Decision
+
+向量入库和相似度检索先使用 Spring Data JPA 提供的 `EntityManager` 执行原生 SQL：
+
+```text
+INSERT ... CAST(:embedding AS vector)
+ORDER BY embedding <=> CAST(:queryEmbedding AS vector)
+```
+
+新增接口：
+
+```text
+POST /api/ai/vector/documents
+POST /api/ai/vector/search
+```
+
+### Reason
+
+- 当前目标是先跑通 Embedding + pgvector 的最小闭环。
+- Hibernate 对 pgvector 字段的实体类型映射会引入额外学习成本，当前阶段暂不深入。
+- JPA 原生 SQL 仍然保留在 Spring/JPA 事务和 Repository 分层内，同时能直接使用 pgvector 操作符。
+
+### Impact
+
+- 当前检索使用精确 cosine distance，没有 HNSW 索引，适合小数据量学习验证。
+- 后续数据量变大时，需要重新评估索引策略、模型维度或向量降维。
+- RAG 阶段可以复用 `POST /api/ai/vector/search` 的检索逻辑，把返回文档作为 Prompt 上下文。

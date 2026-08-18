@@ -66,4 +66,13 @@ public class GlobalExceptionHandler {
         return ResponseEntity.status(HttpStatus.BAD_GATEWAY)
                 .body(new ErrorResp(HttpStatus.BAD_GATEWAY.value(), ex.getMessage(), List.of()));
     }
+
+    /**
+     * 处理向量存储或相似度检索失败异常
+     */
+    @ExceptionHandler(AiVectorStoreException.class)
+    public ResponseEntity<ErrorResp> handleAiVectorStoreException(AiVectorStoreException ex) {
+        return ResponseEntity.status(HttpStatus.BAD_GATEWAY)
+                .body(new ErrorResp(HttpStatus.BAD_GATEWAY.value(), ex.getMessage(), List.of()));
+    }
 }

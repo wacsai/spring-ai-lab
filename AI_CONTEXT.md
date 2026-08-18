@@ -106,7 +106,7 @@ Spring AI 负责：
 
 当前真实状态：
 
-**PostgreSQL + pgvector 环境配置已准备，待连接验证**
+**PostgreSQL + pgvector 最小存取接口已实现，待真实接口验证**
 
 当前代码已经从 Controller demo 推进到基础 AI 调用链：
 
@@ -133,7 +133,7 @@ qwen3.5:4b
 当前已完成：
 
 ```text
-代码结构 + 编译验证 + 真实接口调用验证 + System Prompt + 请求级 Model Options + Streaming + SimpleLoggerAdvisor + Structured Output + Tool Calling + Embedding + JPA/PostgreSQL 配置
+代码结构 + 编译验证 + 真实接口调用验证 + System Prompt + 请求级 Model Options + Streaming + SimpleLoggerAdvisor + Structured Output + Tool Calling + Embedding + JPA/PostgreSQL 配置 + pgvector 最小存取接口
 ```
 
 已验证：
@@ -161,6 +161,16 @@ POST /api/ai/embedding
 → EmbeddingModel
 → qwen3-embedding:4b
 → 返回 2560 维向量
+
+POST /api/ai/vector/documents
+→ content 生成 embedding
+→ JPA EntityManager 原生 SQL
+→ 写入 ai_document_embedding
+
+POST /api/ai/vector/search
+→ query 生成 embedding
+→ pgvector cosine distance `<=>`
+→ 返回最相似文档
 ```
 
 当前接口支持：
@@ -209,6 +219,15 @@ schema.sql = CREATE EXTENSION IF NOT EXISTS vector + ai_document_embedding vecto
 ```
 
 说明：数据库连接、表初始化、向量入库和相似度检索尚未做真实验证。
+
+当前 pgvector 接口：
+
+```text
+POST /api/ai/vector/documents
+POST /api/ai/vector/search
+```
+
+说明：接口代码已编译通过，但尚未向本地数据库插入示例数据验证。
 
 当前 Tool Calling 已验证：
 

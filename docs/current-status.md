@@ -41,6 +41,9 @@ Last Updated: 2026-08-18
 - [x] 已配置本地 PostgreSQL datasource
 - [x] 已准备 pgvector 初始化脚本 `db/schema.sql`
 - [x] 已移除 `vector(2560)` 的 HNSW 索引初始化，避免超过 pgvector HNSW 维度限制
+- [x] 已提供 `POST /api/ai/vector/documents`
+- [x] 已提供 `POST /api/ai/vector/search`
+- [x] 已实现 Embedding + pgvector 精确相似度检索代码
 
 ### GPU / Docker
 
@@ -69,33 +72,37 @@ Last Updated: 2026-08-18
 
 ## Current Stage
 
-**PostgreSQL + pgvector 环境配置已准备，待连接验证**
+**PostgreSQL + pgvector 最小存取接口已实现，待真实接口验证**
 
 当前真实状态：
 
 ```text
 Client
 ↓
-Spring Boot
+VectorDocumentController
 ↓
-Spring Data JPA
+VectorDocumentService
 ↓
-PostgreSQL 18
+EmbeddingModel
 ↓
-pgvector
+qwen3-embedding:4b
+↓
+float[] vector(2560)
+↓
+JPA EntityManager
+↓
+PostgreSQL 18 + pgvector
 ↓
 ai_document_embedding
-↓
-embedding vector(2560)
 ```
 
-当前代码已经完成最小闭环、System Prompt 模板、请求级模型参数覆盖、普通调用、流式调用、基础 Advisor 挂载、结构化输出、Tool Calling 基础接口、带参数 Tool、Embedding 最小接口、JPA/PostgreSQL 依赖接入和 pgvector 初始化脚本准备。
+当前代码已经完成最小闭环、System Prompt 模板、请求级模型参数覆盖、普通调用、流式调用、基础 Advisor 挂载、结构化输出、Tool Calling 基础接口、带参数 Tool、Embedding 最小接口、JPA/PostgreSQL 依赖接入、pgvector 初始化脚本、文档向量入库接口和精确相似度检索接口。
 
-当前数据库配置已启动到执行 schema 阶段；`vector(2560)` 字段可保留，但当前 pgvector HNSW 索引最多支持 2000 维，因此初始化脚本暂不创建 HNSW 索引。尚未实现向量入库和相似度检索接口。
+当前数据库配置已启动到执行 schema 阶段；`vector(2560)` 字段可保留，但当前 pgvector HNSW 索引最多支持 2000 维，因此初始化脚本暂不创建 HNSW 索引。向量入库和检索代码已编译通过，尚未在本地数据库插入示例数据验证。
 
 ## Next Task
 
-验证 **PostgreSQL + pgvector** 并实现最小存取：
+验证 **PostgreSQL + pgvector 最小存取接口**：
 
 ```text
 Text
@@ -107,12 +114,10 @@ Text
 
 验收标准：
 
-- 启动应用并验证 datasource 能连接本地 PostgreSQL 18
-- 确认 `CREATE EXTENSION IF NOT EXISTS vector` 执行成功
-- 确认最小文档表和 `vector(2560)` 字段可用
-- 先使用小数据量精确相似度查询，不创建 HNSW 索引
 - 存入少量文本及其 embedding
 - 提供最小相似度检索接口
+- 验证 `ORDER BY embedding <=> queryVector` 能返回语义相近文档
+- 再进入 RAG，将检索结果放入 Prompt 给 Chat Model 回答
 
 ## Pending
 
