@@ -106,7 +106,7 @@ Spring AI 负责：
 
 当前真实状态：
 
-**Spring AI Tool Calling 基础已完成**
+**Spring AI Embedding 最小闭环已完成**
 
 当前代码已经从 Controller demo 推进到基础 AI 调用链：
 
@@ -133,7 +133,7 @@ qwen3.5:4b
 当前已完成：
 
 ```text
-代码结构 + 编译验证 + 真实接口调用验证 + System Prompt + 请求级 Model Options + Streaming + SimpleLoggerAdvisor + Structured Output + Tool Calling
+代码结构 + 编译验证 + 真实接口调用验证 + System Prompt + 请求级 Model Options + Streaming + SimpleLoggerAdvisor + Structured Output + Tool Calling + Embedding
 ```
 
 已验证：
@@ -156,6 +156,11 @@ POST /api/ai/tool/chat
 → ChatClient 注册 Java Tool
 → 模型按需调用 LearningProgressTool 或 OrderStatusTool
 → 基于工具结果返回回答
+
+POST /api/ai/embedding
+→ EmbeddingModel
+→ qwen3-embedding:4b
+→ 返回 2560 维向量
 ```
 
 当前接口支持：
@@ -179,6 +184,19 @@ POST /api/ai/structured/movie/extract
 
 ```text
 POST /api/ai/tool/chat
+```
+
+当前 Embedding 接口：
+
+```text
+POST /api/ai/embedding
+```
+
+当前 Embedding 配置：
+
+```text
+spring.ai.ollama.embedding.model = qwen3-embedding:4b
+实际向量维度 = 2560
 ```
 
 当前 Tool Calling 已验证：

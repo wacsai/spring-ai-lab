@@ -210,3 +210,50 @@ OrderStatusTool#getOrderStatus(orderNo)
 - 当前 Tool Calling 阶段已覆盖无参数工具和带参数工具。
 - `pom.xml` 中 Maven Compiler 开启 `parameters=true`，用于保留 Java 方法参数名，方便 Spring AI 生成工具参数 schema。
 - 后续接入真实订单、数据库或外部 API 时，可以沿用该模式，但必须补充权限校验、参数校验和审计日志。
+
+---
+
+## ADR-009: Embedding 阶段先做最小向量化接口
+
+Status: Accepted
+
+### Decision
+
+Embedding 阶段先使用 Ollama 模型：
+
+```text
+qwen3-embedding:4b
+```
+
+新增最小接口：
+
+```text
+POST /api/ai/embedding
+```
+
+该接口只完成：
+
+```text
+text -> EmbeddingModel -> float[] vector
+```
+
+并返回模型名、向量维度和前 8 个向量样例。
+
+### Reason
+
+- Embedding 是 pgvector 和 RAG 的前置能力，需要先确认模型能正常返回向量。
+- 不同 Embedding 模型的向量维度不同，建 pgvector 表之前必须先确认维度。
+- 当前阶段不引入数据库，避免把向量化、存储、索引和检索混在同一步。
+
+### Result
+
+真实接口验证确认：
+
+```text
+qwen3-embedding:4b -> 2560 维向量
+```
+
+### Impact
+
+- 后续 pgvector 表字段应按当前模型使用 `vector(2560)`。
+- 如果后续更换 Embedding 模型，需要重新确认维度，并评估是否重建向量数据。

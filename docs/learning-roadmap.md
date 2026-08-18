@@ -2,7 +2,7 @@
 
 ## Current Baseline
 
-当前仓库已完成 Phase 1A、Phase 1B、Phase 1C、Advisors 基础、Structured Output 和 Tool Calling 基础。
+当前仓库已完成 Phase 1A、Phase 1B、Phase 1C、Advisors 基础、Structured Output、Tool Calling 基础和 Embedding 最小闭环。
 
 ```text
 POST /api/ai/chat
@@ -37,6 +37,7 @@ Ollama qwen3.5:4b
 - `POST /api/ai/chat/stream`
 - `POST /api/ai/structured/movie/extract`
 - `POST /api/ai/tool/chat`
+- `POST /api/ai/embedding`
 
 后续按阶段推进，每个阶段只完成一个明确能力，并保持可运行、可验证。
 
@@ -194,6 +195,13 @@ POST /api/ai/chat
 
 - Chat Model 和 Embedding Model 是两类模型，不要默认复用 `qwen3.5:4b`。
 - 进入 pgvector 前，必须先记录所选 Embedding Model 的向量维度。
+
+当前实现：
+
+- Embedding 模型：`qwen3-embedding:4b`
+- 实际向量维度：`2560`
+- 最小接口：`POST /api/ai/embedding`
+- 当前接口只返回维度和前几个向量样例，不做向量数据库存储
 
 ## Phase 6 - PostgreSQL + pgvector
 

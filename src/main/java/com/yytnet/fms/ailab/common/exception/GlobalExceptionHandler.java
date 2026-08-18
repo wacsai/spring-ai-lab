@@ -57,4 +57,13 @@ public class GlobalExceptionHandler {
         return ResponseEntity.status(HttpStatus.BAD_GATEWAY)
                 .body(new ErrorResp(HttpStatus.BAD_GATEWAY.value(), ex.getMessage(), List.of()));
     }
+
+    /**
+     * 处理文本向量化失败异常
+     */
+    @ExceptionHandler(AiEmbeddingException.class)
+    public ResponseEntity<ErrorResp> handleAiEmbeddingException(AiEmbeddingException ex) {
+        return ResponseEntity.status(HttpStatus.BAD_GATEWAY)
+                .body(new ErrorResp(HttpStatus.BAD_GATEWAY.value(), ex.getMessage(), List.of()));
+    }
 }

@@ -32,6 +32,11 @@ Last Updated: 2026-08-18
 - [x] 已通过真实接口验证模型生成 `toolCalls` 并收到 `ToolResponseMessage`
 - [x] 已通过真实接口验证模型可以从用户问题中提取 `orderNo` 并传入 Java Tool
 - [x] 已提供 Tool Calling 失败的统一错误响应
+- [x] 已配置 Ollama Embedding 模型 `qwen3-embedding:4b`
+- [x] 已提供 `POST /api/ai/embedding`
+- [x] 已通过真实接口验证文本向量化
+- [x] 已确认 `qwen3-embedding:4b` 返回向量维度为 `2560`
+- [x] 已提供 Embedding 失败的统一错误响应
 
 ### GPU / Docker
 
@@ -60,57 +65,49 @@ Last Updated: 2026-08-18
 
 ## Current Stage
 
-**Spring AI Tool Calling 基础已完成**
+**Spring AI Embedding 最小闭环已完成**
 
 当前真实状态：
 
 ```text
 Client
 ↓
-ToolCallingController
+EmbeddingController
 ↓
-ToolCallingService
+EmbeddingService
 ↓
-ChatClient
-↓
-System Prompt + User Prompt + Model Options + Java Tool
-↓
-SimpleLoggerAdvisor
-↓
-call()
-↓
-Spring AI Tool Calling
-↓
-LearningProgressTool#getSpringAiLearningProgress / OrderStatusTool#getOrderStatus(orderNo)
+EmbeddingModel
 ↓
 Spring AI Ollama
 ↓
-qwen3.5:4b
+qwen3-embedding:4b
+↓
+float[] vector(2560)
 ```
 
-当前代码已经完成最小闭环、System Prompt 模板、请求级模型参数覆盖、普通调用、流式调用、基础 Advisor 挂载、结构化输出、Tool Calling 基础接口、带参数 Tool、编译验证和真实接口调用验证。
+当前代码已经完成最小闭环、System Prompt 模板、请求级模型参数覆盖、普通调用、流式调用、基础 Advisor 挂载、结构化输出、Tool Calling 基础接口、带参数 Tool、Embedding 最小接口、编译验证和真实接口调用验证。
 
 ## Next Task
 
-进入 **Embedding**：
+进入 **PostgreSQL + pgvector**：
 
 ```text
 Text
 → EmbeddingModel
-→ Vector
-→ Similarity
+→ Vector(2560)
+→ PostgreSQL + pgvector
+→ Similarity Search
 ```
 
 验收标准：
 
-- 选定一个 Embedding 模型
-- 记录向量维度
-- 提供最小文本向量化接口
-- 可以解释 Chat Model 和 Embedding Model 的区别
+- 安装并启用 PostgreSQL pgvector 扩展
+- 建立最小文档表和 `vector(2560)` 字段
+- 存入少量文本及其 embedding
+- 提供最小相似度检索接口
 
 ## Pending
 
-- [ ] Embedding
 - [ ] PostgreSQL + pgvector
 - [ ] RAG
 - [ ] Chat Memory
