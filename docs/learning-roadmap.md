@@ -216,6 +216,15 @@ POST /api/ai/chat
 - schema 初始化策略
 - 文档 id 与 metadata 设计
 
+当前准备：
+
+- 已加入 Spring Data JPA
+- 已加入 PostgreSQL JDBC Driver
+- 已配置 datasource，默认连接 `jdbc:postgresql://localhost:5432/spring_ai_lab`
+- 已准备 `db/schema.sql`，包含 `CREATE EXTENSION IF NOT EXISTS vector` 和 `ai_document_embedding.embedding vector(2560)`
+- 由于当前 pgvector HNSW 索引最多支持 2000 维，`qwen3-embedding:4b` 的 2560 维向量暂不创建 HNSW 索引
+- 尚未实现向量入库和相似度检索接口
+
 ## Phase 7 - RAG
 
 目标：构建知识库问答。

@@ -106,7 +106,7 @@ Spring AI 负责：
 
 当前真实状态：
 
-**Spring AI Embedding 最小闭环已完成**
+**PostgreSQL + pgvector 环境配置已准备，待连接验证**
 
 当前代码已经从 Controller demo 推进到基础 AI 调用链：
 
@@ -133,7 +133,7 @@ qwen3.5:4b
 当前已完成：
 
 ```text
-代码结构 + 编译验证 + 真实接口调用验证 + System Prompt + 请求级 Model Options + Streaming + SimpleLoggerAdvisor + Structured Output + Tool Calling + Embedding
+代码结构 + 编译验证 + 真实接口调用验证 + System Prompt + 请求级 Model Options + Streaming + SimpleLoggerAdvisor + Structured Output + Tool Calling + Embedding + JPA/PostgreSQL 配置
 ```
 
 已验证：
@@ -198,6 +198,17 @@ POST /api/ai/embedding
 spring.ai.ollama.embedding.model = qwen3-embedding:4b
 实际向量维度 = 2560
 ```
+
+当前 PostgreSQL / pgvector 配置：
+
+```text
+spring.datasource.url = jdbc:postgresql://localhost:5432/spring_ai_lab
+spring.datasource.username = spring_ai_lab
+spring.datasource.password = spring_ai_lab_pwd
+schema.sql = CREATE EXTENSION IF NOT EXISTS vector + ai_document_embedding vector(2560)
+```
+
+说明：数据库连接、表初始化、向量入库和相似度检索尚未做真实验证。
 
 当前 Tool Calling 已验证：
 

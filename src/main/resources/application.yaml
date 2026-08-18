@@ -1,6 +1,24 @@
 spring:
   application:
     name: spring-ai-lab
+  datasource:
+    url: ${SPRING_DATASOURCE_URL:jdbc:postgresql://localhost:5432/spring_ai_lab}
+    username: ${SPRING_DATASOURCE_USERNAME:spring_ai_lab}
+    password: ${SPRING_DATASOURCE_PASSWORD:spring_ai_lab_pwd}
+    driver-class-name: org.postgresql.Driver
+  jpa:
+    open-in-view: false
+    hibernate:
+      # 当前阶段用 schema.sql 管理 pgvector 初始化，不让 Hibernate 自动改表。
+      ddl-auto: none
+    properties:
+      hibernate:
+        format_sql: true
+  sql:
+    init:
+      # 启动时执行 db/schema.sql，用于创建 pgvector 扩展和最小表结构。
+      mode: always
+      schema-locations: classpath:db/schema.sql
   ai:
     model:
       embedding: ollama

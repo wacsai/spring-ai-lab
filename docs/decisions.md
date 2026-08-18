@@ -257,3 +257,48 @@ qwen3-embedding:4b -> 2560 维向量
 
 - 后续 pgvector 表字段应按当前模型使用 `vector(2560)`。
 - 如果后续更换 Embedding 模型，需要重新确认维度，并评估是否重建向量数据。
+
+---
+
+## ADR-010: PostgreSQL + pgvector 先接入 JPA 和初始化脚本
+
+Status: Accepted
+
+### Decision
+
+PostgreSQL + pgvector 阶段先做数据库环境准备：
+
+```text
+Spring Data JPA
+PostgreSQL JDBC Driver
+spring.datasource.*
+db/schema.sql
+```
+
+当前默认连接配置：
+
+```text
+jdbc:postgresql://localhost:5432/spring_ai_lab
+username = spring_ai_lab
+password = spring_ai_lab_pwd
+```
+
+初始化脚本先创建：
+
+```text
+CREATE EXTENSION IF NOT EXISTS vector
+ai_document_embedding.embedding vector(2560)
+```
+
+### Reason
+
+- 用户已在本地准备 PostgreSQL 18 + pgvector，希望先把 Spring Boot 数据库环境接起来。
+- 当前 Embedding 模型 `qwen3-embedding:4b` 已真实验证为 2560 维，因此表结构先按 `vector(2560)` 准备。
+- 本阶段先不实现 RAG，不引入复杂文档切分、召回、Prompt 拼接。
+
+### Impact
+
+- 应用启动时会尝试连接 datasource，并执行 `db/schema.sql`。
+- 如果本地库名、用户名或密码不同，需要修改 `SPRING_DATASOURCE_URL`、`SPRING_DATASOURCE_USERNAME`、`SPRING_DATASOURCE_PASSWORD` 或 `application.yaml`。
+- 后续可以在该表基础上实现最小文本入库和相似度检索。
+- 当前暂不创建 HNSW 索引，因为 `qwen3-embedding:4b` 是 2560 维，已超过当前 pgvector HNSW 索引 2000 维限制。

@@ -37,6 +37,10 @@ Last Updated: 2026-08-18
 - [x] 已通过真实接口验证文本向量化
 - [x] 已确认 `qwen3-embedding:4b` 返回向量维度为 `2560`
 - [x] 已提供 Embedding 失败的统一错误响应
+- [x] 已加入 Spring Data JPA 和 PostgreSQL JDBC 依赖
+- [x] 已配置本地 PostgreSQL datasource
+- [x] 已准备 pgvector 初始化脚本 `db/schema.sql`
+- [x] 已移除 `vector(2560)` 的 HNSW 索引初始化，避免超过 pgvector HNSW 维度限制
 
 ### GPU / Docker
 
@@ -65,31 +69,33 @@ Last Updated: 2026-08-18
 
 ## Current Stage
 
-**Spring AI Embedding 最小闭环已完成**
+**PostgreSQL + pgvector 环境配置已准备，待连接验证**
 
 当前真实状态：
 
 ```text
 Client
 ↓
-EmbeddingController
+Spring Boot
 ↓
-EmbeddingService
+Spring Data JPA
 ↓
-EmbeddingModel
+PostgreSQL 18
 ↓
-Spring AI Ollama
+pgvector
 ↓
-qwen3-embedding:4b
+ai_document_embedding
 ↓
-float[] vector(2560)
+embedding vector(2560)
 ```
 
-当前代码已经完成最小闭环、System Prompt 模板、请求级模型参数覆盖、普通调用、流式调用、基础 Advisor 挂载、结构化输出、Tool Calling 基础接口、带参数 Tool、Embedding 最小接口、编译验证和真实接口调用验证。
+当前代码已经完成最小闭环、System Prompt 模板、请求级模型参数覆盖、普通调用、流式调用、基础 Advisor 挂载、结构化输出、Tool Calling 基础接口、带参数 Tool、Embedding 最小接口、JPA/PostgreSQL 依赖接入和 pgvector 初始化脚本准备。
+
+当前数据库配置已启动到执行 schema 阶段；`vector(2560)` 字段可保留，但当前 pgvector HNSW 索引最多支持 2000 维，因此初始化脚本暂不创建 HNSW 索引。尚未实现向量入库和相似度检索接口。
 
 ## Next Task
 
-进入 **PostgreSQL + pgvector**：
+验证 **PostgreSQL + pgvector** 并实现最小存取：
 
 ```text
 Text
@@ -101,8 +107,10 @@ Text
 
 验收标准：
 
-- 安装并启用 PostgreSQL pgvector 扩展
-- 建立最小文档表和 `vector(2560)` 字段
+- 启动应用并验证 datasource 能连接本地 PostgreSQL 18
+- 确认 `CREATE EXTENSION IF NOT EXISTS vector` 执行成功
+- 确认最小文档表和 `vector(2560)` 字段可用
+- 先使用小数据量精确相似度查询，不创建 HNSW 索引
 - 存入少量文本及其 embedding
 - 提供最小相似度检索接口
 

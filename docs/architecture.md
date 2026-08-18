@@ -54,7 +54,13 @@ http://192.168.0.50:11434
 第一阶段使用：
 
 ```text
-PostgreSQL + pgvector
+PostgreSQL 18 + pgvector
+```
+
+当前 Embedding 模型：
+
+```text
+qwen3-embedding:4b -> vector(2560)
 ```
 
 后续对比：
