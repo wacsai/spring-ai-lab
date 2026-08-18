@@ -46,6 +46,10 @@ Last Updated: 2026-08-18
 - [x] 已实现 Embedding + pgvector 精确相似度检索代码
 - [x] 已将 pgvector 相似度检索改为 Spring Data JPA `@Query(nativeQuery = true)`
 - [x] 已验证 `@Query` 检索接口可返回语义相近文档
+- [x] 已提供 `POST /api/ai/rag/chat`
+- [x] 已实现最小 RAG 闭环：向量检索参考资料后交给 ChatClient 回答
+- [x] 已为 RAG 增加 `maxDistance` 阈值，避免明显无关资料进入 Prompt
+- [x] 已通过真实接口验证 `POST /api/ai/rag/chat` 可返回 answer + references
 
 ### GPU / Docker
 
@@ -74,56 +78,56 @@ Last Updated: 2026-08-18
 
 ## Current Stage
 
-**PostgreSQL + pgvector 最小存取接口已实现，待真实接口验证**
+**RAG 最小闭环已实现并通过真实接口验证**
 
 当前真实状态：
 
 ```text
 Client
 ↓
-VectorDocumentController
+RagController
 ↓
-VectorDocumentService
+RagService
 ↓
-EmbeddingModel
+VectorDocumentService.searchSimilarDocuments()
 ↓
-qwen3-embedding:4b
+EmbeddingModel + PostgreSQL 18 + pgvector
 ↓
-float[] vector(2560)
+相似文档 references
 ↓
-JPA EntityManager
+ChatClient
 ↓
-PostgreSQL 18 + pgvector
+qwen3.5:4b
 ↓
-ai_document_embedding
+基于参考资料回答
 ```
 
-当前代码已经完成最小闭环、System Prompt 模板、请求级模型参数覆盖、普通调用、流式调用、基础 Advisor 挂载、结构化输出、Tool Calling 基础接口、带参数 Tool、Embedding 最小接口、JPA/PostgreSQL 依赖接入、pgvector 初始化脚本、文档向量入库接口和精确相似度检索接口。
+当前代码已经完成最小闭环、System Prompt 模板、请求级模型参数覆盖、普通调用、流式调用、基础 Advisor 挂载、结构化输出、Tool Calling 基础接口、带参数 Tool、Embedding 最小接口、JPA/PostgreSQL 依赖接入、pgvector 初始化脚本、文档向量入库接口、精确相似度检索接口和最小 RAG 问答接口。
 
-当前数据库配置已启动到执行 schema 阶段；`vector(2560)` 字段可保留，但当前 pgvector HNSW 索引最多支持 2000 维，因此初始化脚本暂不创建 HNSW 索引。向量入库和检索代码已编译通过，检索接口已通过真实请求验证。
+当前数据库配置已启动到执行 schema 阶段；`vector(2560)` 字段可保留，但当前 pgvector HNSW 索引最多支持 2000 维，因此初始化脚本暂不创建 HNSW 索引。向量入库、检索代码和最小 RAG 接口已编译通过，并已通过真实请求验证。
 
 ## Next Task
 
-验证 **PostgreSQL + pgvector 最小存取接口**：
+进入 **RAG 后续增强**：
 
 ```text
-Text
-→ EmbeddingModel
-→ Vector(2560)
-→ PostgreSQL + pgvector
-→ Similarity Search
+文档切分
+→ 批量导入
+→ 召回阈值调优
+→ 引用格式优化
 ```
 
 验收标准：
 
-- 将检索结果放入 Prompt
-- 让 Chat Model 基于检索出的文档回答
-- 进入 RAG 最小闭环
+- 一段长文档可以拆成多个片段入库
+- RAG 返回的 references 能定位到具体片段
+- 对无关问题的拒答更稳定
 
 ## Pending
 
-- [ ] PostgreSQL + pgvector
-- [ ] RAG
+- [x] PostgreSQL + pgvector
+- [x] RAG 最小闭环
+- [ ] RAG 后续增强
 - [ ] Chat Memory
 - [ ] Agent
 - [ ] MCP

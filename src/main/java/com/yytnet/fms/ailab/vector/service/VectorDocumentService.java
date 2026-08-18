@@ -67,21 +67,8 @@ public class VectorDocumentService {
         try {
             int topK = req.topK() == null ? DEFAULT_TOP_K : req.topK();
 
-            // 检索流程和入库流程的前半段一致：
-            // 用户问题也要先变成同一个 embedding 模型生成的 2560 维向量。
-            // 只有“查询向量”和“文档向量”在同一个向量空间里，pgvector 的距离计算才有意义。
             float[] queryEmbedding = embedAndValidate(req.query());
-            List<VectorSearchItemResp> results = vectorDocumentQueryRepository
-                    .searchByCosineDistance(pgVectorLiteralConverter.toLiteral(queryEmbedding), topK)
-                    .stream()
-                    .map(row -> new VectorSearchItemResp(
-                            row.getId(),
-                            row.getTitle(),
-                            row.getContent(),
-                            row.getDistance(),
-                            toSimilarity(row.getDistance())
-                    ))
-                    .toList();
+            List<VectorSearchItemResp> results = searchSimilarDocuments(queryEmbedding, topK);
 
             return new VectorSearchResp(
                     req.query(),
@@ -93,6 +80,38 @@ public class VectorDocumentService {
         } catch (RuntimeException ex) {
             throw new AiVectorStoreException("文档相似度检索失败", ex);
         }
+    }
+
+    /**
+     * 给 RAG 等内部能力复用的相似文档检索方法。
+     *
+     * <p>这个方法只负责“检索资料”，不负责把资料交给 Chat Model 回答；
+     * 后者属于 RAG Service 的职责。</p>
+     */
+    public List<VectorSearchItemResp> searchSimilarDocuments(String query, int topK) {
+        try {
+            float[] queryEmbedding = embedAndValidate(query);
+            return searchSimilarDocuments(queryEmbedding, topK);
+        } catch (RuntimeException ex) {
+            throw new AiVectorStoreException("文档相似度检索失败", ex);
+        }
+    }
+
+    private List<VectorSearchItemResp> searchSimilarDocuments(float[] queryEmbedding, int topK) {
+        // 检索流程和入库流程的前半段一致：
+        // 用户问题也要先变成同一个 embedding 模型生成的 2560 维向量。
+        // 只有“查询向量”和“文档向量”在同一个向量空间里，pgvector 的距离计算才有意义。
+        return vectorDocumentQueryRepository
+                .searchByCosineDistance(pgVectorLiteralConverter.toLiteral(queryEmbedding), topK)
+                .stream()
+                .map(row -> new VectorSearchItemResp(
+                        row.getId(),
+                        row.getTitle(),
+                        row.getContent(),
+                        row.getDistance(),
+                        toSimilarity(row.getDistance())
+                ))
+                .toList();
     }
 
     private float[] embedAndValidate(String text) {

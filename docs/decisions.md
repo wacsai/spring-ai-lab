@@ -342,3 +342,42 @@ POST /api/ai/vector/search
 - 当前检索使用精确 cosine distance，没有 HNSW 索引，适合小数据量学习验证。
 - 后续数据量变大时，需要重新评估索引策略、模型维度或向量降维。
 - RAG 阶段可以复用 `POST /api/ai/vector/search` 的检索逻辑，把返回文档作为 Prompt 上下文。
+
+---
+
+## ADR-012: RAG 先实现最小闭环接口
+
+Status: Accepted
+
+### Decision
+
+新增独立 RAG 接口：
+
+```text
+POST /api/ai/rag/chat
+```
+
+当前最小流程：
+
+```text
+question
+→ VectorDocumentService.searchSimilarDocuments()
+→ pgvector 返回相似文档
+→ maxDistance 过滤明显无关资料
+→ references 拼入 System Prompt
+→ ChatClient 生成回答
+```
+
+### Reason
+
+- RAG 的核心是“先检索，再生成”，当前阶段应先把 Embedding、pgvector、ChatClient 串起来。
+- 继续复用已有向量检索逻辑，避免在 RAG 阶段重复实现 embedding 和 SQL 查询。
+- 增加 `maxDistance` 阈值，避免数据库里总是返回 topK 导致无关资料被塞进 Prompt。
+- 当前阶段暂不引入文档切分、批量导入、复杂 rerank、Spring AI VectorStore 抽象或 Memory。
+
+### Impact
+
+- `POST /api/ai/vector/search` 继续用于观察底层向量检索结果。
+- `POST /api/ai/rag/chat` 用于观察“检索结果如何影响模型回答”。
+- response 返回 `references`，便于学习阶段确认模型回答前实际拿到了哪些资料。
+- 后续真实 RAG 阶段需要补充文档切分、数据导入、召回阈值调优和引用格式优化。

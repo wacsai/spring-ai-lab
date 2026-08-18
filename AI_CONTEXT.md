@@ -106,7 +106,7 @@ Spring AI 负责：
 
 当前真实状态：
 
-**PostgreSQL + pgvector 最小存取接口已实现，待真实接口验证**
+**RAG 最小闭环已实现并通过真实接口验证**
 
 当前代码已经从 Controller demo 推进到基础 AI 调用链：
 
@@ -133,7 +133,7 @@ qwen3.5:4b
 当前已完成：
 
 ```text
-代码结构 + 编译验证 + 真实接口调用验证 + System Prompt + 请求级 Model Options + Streaming + SimpleLoggerAdvisor + Structured Output + Tool Calling + Embedding + JPA/PostgreSQL 配置 + pgvector 最小存取接口
+代码结构 + 编译验证 + 真实接口调用验证 + System Prompt + 请求级 Model Options + Streaming + SimpleLoggerAdvisor + Structured Output + Tool Calling + Embedding + JPA/PostgreSQL 配置 + pgvector 最小存取接口 + RAG 最小闭环
 ```
 
 已验证：
@@ -172,6 +172,14 @@ POST /api/ai/vector/search
 → Spring Data JPA `@Query(nativeQuery = true)`
 → pgvector cosine distance `<=>`
 → 返回最相似文档
+
+POST /api/ai/rag/chat
+→ question 生成 embedding
+→ pgvector 检索相似文档
+→ 按 maxDistance 过滤参考资料
+→ 把参考资料放入 System Prompt
+→ ChatClient 基于资料生成回答
+→ 返回 answer + references
 ```
 
 当前接口支持：
@@ -217,6 +225,12 @@ spring.datasource.url = jdbc:postgresql://localhost:5432/spring_ai_lab
 spring.datasource.username = spring_ai_lab
 spring.datasource.password = spring_ai_lab_pwd
 schema.sql = CREATE EXTENSION IF NOT EXISTS vector + ai_document_embedding vector(2560)
+```
+
+当前 RAG 接口：
+
+```text
+POST /api/ai/rag/chat
 ```
 
 说明：数据库连接、表初始化、向量入库和相似度检索尚未做真实验证。
