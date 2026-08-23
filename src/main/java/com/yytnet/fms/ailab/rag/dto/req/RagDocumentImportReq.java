@@ -24,7 +24,11 @@ public record RagDocumentImportReq(
         // 相邻 chunk 重叠的字符数；不传时使用 RagDocumentChunker 的默认值 80。
         @Min(value = 0, message = "overlap不能小于0")
         @Max(value = 500, message = "overlap不能大于500")
-        Integer overlap
+        Integer overlap,
+
+        // 学习阶段经常会反复导入同一篇文档。
+        // true 表示先删除相同 title 对应的旧 chunk，再写入本次新切分出来的 chunk，避免检索时命中重复资料。
+        Boolean replaceExisting
 ) {
 
     @AssertTrue(message = "overlap必须小于chunkSize")

@@ -77,4 +77,17 @@ public class VectorDocumentCommandRepository {
         Number id = (Number) query.getSingleResult();
         return id.longValue();
     }
+
+    @Transactional
+    public int deleteChunksByDocumentTitle(String documentTitle) {
+        // 只删除 RAG 文档导入产生的 chunk 记录：
+        // saveChunk(...) 会写 document_title，早期 /api/ai/vector/documents 写入的普通短文本没有 document_title。
+        // 这样 replaceExisting 不会误删普通向量 demo 数据。
+        Query query = entityManager.createNativeQuery("""
+                DELETE FROM ai_document_embedding
+                WHERE document_title = :documentTitle
+                """);
+        query.setParameter("documentTitle", documentTitle);
+        return query.executeUpdate();
+    }
 }

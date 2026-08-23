@@ -506,3 +506,48 @@ rejectedReferences = 被 maxDistance 过滤掉的候选资料，不进入 Prompt
 - `/api/ai/rag/chat` 响应结构新增 `citations` 字段。
 - 旧的 `references` 和 `rejectedReferences` 语义不变。
 - 后续可以继续在 `citations` 中增加 sourceType、sourceName、externalId、pageNumber 等真实文档来源字段。
+
+---
+
+## ADR-016: RAG 文档导入支持同名文档替换
+
+Status: Accepted
+
+### Decision
+
+`POST /api/ai/rag/documents` 请求新增：
+
+```text
+replaceExisting
+```
+
+行为：
+
+```text
+replaceExisting != true
+→ 保持原行为，直接追加本次导入的 chunk
+
+replaceExisting = true
+→ 先删除 document_title 等于当前 title 的旧 chunk
+→ 再切分当前 content
+→ 每个新 chunk 重新生成 embedding 并写入 pgvector
+```
+
+响应新增：
+
+```text
+replaceExisting
+deletedCount
+```
+
+### Reason
+
+- 学习阶段会反复导入同一篇测试文档，容易产生重复 chunk。
+- 重复 chunk 会让 RAG 检索结果出现内容相同、distance 相同的多条记录，影响观察和调参。
+- 默认仍然追加，避免一次普通导入意外删除旧数据；只有显式传 `replaceExisting=true` 才执行替换。
+
+### Impact
+
+- 删除范围只限定在 `document_title = title` 的 RAG chunk。
+- 早期 `/api/ai/vector/documents` 写入的普通向量 demo 记录没有 `document_title`，不会被该功能删除。
+- 当前实现是学习阶段的最小替换能力；后续真实业务应增加 documentId、sourceId、版本号、权限边界和导入事务策略。

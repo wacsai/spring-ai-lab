@@ -62,8 +62,10 @@ public class RagService {
 
     public RagDocumentImportResp importDocument(RagDocumentImportReq req) {
         try {
+            String documentTitle = req.title().strip();
             int chunkSize = req.chunkSize() == null ? RagDocumentChunker.DEFAULT_CHUNK_SIZE : req.chunkSize();
             int overlap = req.overlap() == null ? RagDocumentChunker.DEFAULT_OVERLAP : req.overlap();
+            boolean replaceExisting = Boolean.TRUE.equals(req.replaceExisting());
 
             // 文档导入阶段只做 RAG 的“知识入库”：
             // 1. 把一篇长文档切成多个 chunk。
@@ -73,21 +75,24 @@ public class RagService {
             // 如果单个自然单元超过 chunkSize，才会退回按 Java 字符数硬切。
             List<RagDocumentChunker.Chunk> chunks = ragDocumentChunker.split(req.content(), chunkSize, overlap);
             int chunkCount = chunks.size();
+            int deletedCount = deleteExistingChunksIfNecessary(documentTitle, replaceExisting);
 
             // 这里逐个 chunk 入库，而不是整篇文档只存一条向量。
             // 这样用户提问时，pgvector 可以命中更精确的片段，而不是返回整篇文档的“平均语义”。
             List<RagDocumentChunkResp> importedChunks = chunks.stream()
-                    .map(chunk -> importChunk(req.title(), chunk, chunkCount))
+                    .map(chunk -> importChunk(documentTitle, chunk, chunkCount))
                     .toList();
 
             return new RagDocumentImportResp(
-                    req.title(),
+                    documentTitle,
                     req.content().strip().length(),
                     chunkSize,
                     overlap,
+                    replaceExisting,
+                    deletedCount,
                     chunkCount,
                     importedChunks,
-                    "长文档已按 chunk 切分；每个 chunk 已生成 embedding 并写入 pgvector。"
+                    buildImportNote(replaceExisting, deletedCount)
             );
         } catch (RuntimeException ex) {
             throw new AiRagException("RAG 文档入库失败", ex);
@@ -200,6 +205,22 @@ public class RagService {
                 chunk.text().length(),
                 chunkTitle
         );
+    }
+
+    private int deleteExistingChunksIfNecessary(String documentTitle, boolean replaceExisting) {
+        if (!replaceExisting) {
+            return 0;
+        }
+        // 只在调用方明确传 replaceExisting=true 时清理同名旧 chunk。
+        // 这适合学习阶段反复导入同一份资料，避免检索结果里出现重复内容。
+        return vectorDocumentService.deleteChunksByDocumentTitle(documentTitle);
+    }
+
+    private String buildImportNote(boolean replaceExisting, int deletedCount) {
+        if (!replaceExisting) {
+            return "长文档已按 chunk 切分；每个 chunk 已生成 embedding 并写入 pgvector。";
+        }
+        return "已先删除相同文档标题的旧 chunk %d 条，再写入本次新切分的 chunk。".formatted(deletedCount);
     }
 
     private String buildChunkTitle(String documentTitle, int chunkIndex, int chunkCount) {

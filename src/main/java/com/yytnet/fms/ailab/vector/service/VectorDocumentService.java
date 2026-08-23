@@ -122,6 +122,16 @@ public class VectorDocumentService {
         }
     }
 
+    public int deleteChunksByDocumentTitle(String documentTitle) {
+        try {
+            // RAG 重新导入同一篇文档时使用。
+            // 这里只按 document_title 删除 chunk，不按 title 删除普通向量 demo 记录。
+            return vectorDocumentCommandRepository.deleteChunksByDocumentTitle(documentTitle);
+        } catch (RuntimeException ex) {
+            throw new AiVectorStoreException("按文档标题删除旧文档片段失败", ex);
+        }
+    }
+
     private List<VectorSearchItemResp> searchSimilarDocuments(float[] queryEmbedding, int topK) {
         // 检索流程和入库流程的前半段一致：
         // 用户问题也要先变成同一个 embedding 模型生成的 2560 维向量。

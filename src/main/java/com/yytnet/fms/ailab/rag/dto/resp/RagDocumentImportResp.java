@@ -7,6 +7,8 @@ public record RagDocumentImportResp(
         int contentLength,
         int chunkSize,
         int overlap,
+        boolean replaceExisting,
+        int deletedCount,
         int chunkCount,
         List<RagDocumentChunkResp> chunks,
         String note
