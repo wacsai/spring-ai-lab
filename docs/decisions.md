@@ -467,3 +467,42 @@ rejectedReferences = distance > maxDistance，只用于调试观察，不进入 
 - `references` 继续表示模型实际使用的资料。
 - `rejectedReferences` 可能包含语义较弱的候选，不会进入 Prompt。
 - 后续可以基于这些诊断数据继续调优默认阈值、召回数量和切分策略。
+
+---
+
+## ADR-015: RAG 问答响应增加引用摘要 citations
+
+Status: Accepted
+
+### Decision
+
+`POST /api/ai/rag/chat` 响应中保留完整 `references`，同时新增更适合前端展示的 `citations`：
+
+```text
+citations
+references
+rejectedReferences
+```
+
+其中：
+
+```text
+citations = 实际进入 Prompt 的资料摘要，只包含 label、文档标题、chunk 位置、distance、similarity 等展示字段
+references = 实际进入 Prompt 的完整资料，包含 content，适合学习和调试
+rejectedReferences = 被 maxDistance 过滤掉的候选资料，不进入 Prompt
+```
+
+`citations.label` 和 System Prompt 中的“资料 1”“资料 2”使用同一套编号逻辑。
+
+### Reason
+
+- 企业 RAG 场景需要回答“答案依据是什么”。
+- 完整 `references` 适合调试，但直接给前端展示会过重，也容易把长 chunk 内容暴露到普通引用区域。
+- 单独返回 `citations` 可以让前端展示引用来源，同时继续保留学习阶段需要的完整诊断信息。
+- 引用编号和 Prompt 资料编号对齐后，可以更容易判断模型回答里提到的“资料 N”对应哪条数据库记录。
+
+### Impact
+
+- `/api/ai/rag/chat` 响应结构新增 `citations` 字段。
+- 旧的 `references` 和 `rejectedReferences` 语义不变。
+- 后续可以继续在 `citations` 中增加 sourceType、sourceName、externalId、pageNumber 等真实文档来源字段。

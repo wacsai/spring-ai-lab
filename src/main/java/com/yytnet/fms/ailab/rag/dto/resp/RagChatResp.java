@@ -10,6 +10,7 @@ public record RagChatResp(
         int retrievedCount,
         int usedCount,
         int rejectedCount,
+        List<RagCitationResp> citations,
         List<RagReferenceResp> references,
         List<RagReferenceResp> rejectedReferences,
         String note

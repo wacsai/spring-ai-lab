@@ -1,6 +1,6 @@
 # Current Status
 
-Last Updated: 2026-08-18
+Last Updated: 2026-08-23
 
 ## Completed
 
@@ -57,6 +57,7 @@ Last Updated: 2026-08-18
 - [x] 已为 `POST /api/ai/rag/chat` 增加检索诊断字段
 - [x] 已区分 `references` 和 `rejectedReferences`
 - [x] 已将 RAG 文档切分升级为句子/换行自然边界优先，超长单元再字符兜底
+- [x] 已为 `POST /api/ai/rag/chat` 增加 `citations` 引用摘要，便于前端展示答案依据
 
 ### GPU / Docker
 
@@ -85,7 +86,7 @@ Last Updated: 2026-08-18
 
 ## Current Stage
 
-**RAG 自然切分策略已实现并通过真实接口验证**
+**RAG 引用结构增强已实现**
 
 当前真实状态：
 
@@ -124,6 +125,8 @@ maxDistance 过滤
 ↓
 references / rejectedReferences
 ↓
+citations 引用摘要
+↓
 ChatClient
 ↓
 qwen3.5:4b
@@ -131,17 +134,16 @@ qwen3.5:4b
 基于参考资料回答
 ```
 
-当前代码已经完成最小闭环、System Prompt 模板、请求级模型参数覆盖、普通调用、流式调用、基础 Advisor 挂载、结构化输出、Tool Calling 基础接口、带参数 Tool、Embedding 最小接口、JPA/PostgreSQL 依赖接入、pgvector 初始化脚本、文档向量入库接口、精确相似度检索接口、最小 RAG 问答接口、RAG 文档切分入库接口和 RAG 检索诊断字段。
+当前代码已经完成最小闭环、System Prompt 模板、请求级模型参数覆盖、普通调用、流式调用、基础 Advisor 挂载、结构化输出、Tool Calling 基础接口、带参数 Tool、Embedding 最小接口、JPA/PostgreSQL 依赖接入、pgvector 初始化脚本、文档向量入库接口、精确相似度检索接口、最小 RAG 问答接口、RAG 文档切分入库接口、RAG 检索诊断字段和 RAG 引用摘要。
 
-当前数据库配置已启动到执行 schema 阶段；`vector(2560)` 字段可保留，但当前 pgvector HNSW 索引最多支持 2000 维，因此初始化脚本暂不创建 HNSW 索引。向量入库、检索代码、最小 RAG 接口、RAG 文档切分入库接口、RAG 检索诊断字段和 RAG 自然切分策略已编译通过，并已通过真实请求验证。
+当前数据库配置已启动到执行 schema 阶段；`vector(2560)` 字段可保留，但当前 pgvector HNSW 索引最多支持 2000 维，因此初始化脚本暂不创建 HNSW 索引。向量入库、检索代码、最小 RAG 接口、RAG 文档切分入库接口、RAG 检索诊断字段和 RAG 自然切分策略已编译通过，并已通过真实请求验证。RAG 引用摘要已完成代码实现，待下一次真实接口调用验证响应结构。
 
 ## Next Task
 
 进入 **RAG 后续增强**：
 
 ```text
-引用格式优化
-→ 文档解析
+文档解析
 → 召回阈值默认值调优
 → 更精细的 metadata / 权限过滤
 ```
@@ -159,6 +161,7 @@ qwen3.5:4b
 - [x] RAG 文档切分真实接口验证
 - [x] RAG 检索诊断真实接口验证
 - [x] RAG 自然切分策略真实接口验证
+- [x] RAG 引用摘要
 - [ ] RAG 后续增强
 - [ ] Chat Memory
 - [ ] Agent

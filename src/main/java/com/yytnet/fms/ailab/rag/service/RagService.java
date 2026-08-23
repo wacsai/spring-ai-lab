@@ -4,6 +4,7 @@ import com.yytnet.fms.ailab.common.exception.AiRagException;
 import com.yytnet.fms.ailab.rag.dto.req.RagChatReq;
 import com.yytnet.fms.ailab.rag.dto.req.RagDocumentImportReq;
 import com.yytnet.fms.ailab.rag.dto.resp.RagChatResp;
+import com.yytnet.fms.ailab.rag.dto.resp.RagCitationResp;
 import com.yytnet.fms.ailab.rag.dto.resp.RagDocumentChunkResp;
 import com.yytnet.fms.ailab.rag.dto.resp.RagDocumentImportResp;
 import com.yytnet.fms.ailab.rag.dto.resp.RagReferenceResp;
@@ -15,6 +16,7 @@ import org.springframework.ai.ollama.api.OllamaChatOptions;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
+import java.util.ArrayList;
 import java.util.List;
 
 @Service
@@ -67,7 +69,8 @@ public class RagService {
             // 1. 把一篇长文档切成多个 chunk。
             // 2. 每个 chunk 单独生成 embedding。
             // 3. 每个 chunk 单独写入 pgvector。
-            // 当前切分器按 Java 字符数截取，所以可能切断句子；后续会升级成段落/标题/token 等更自然的切分策略。
+            // 当前切分器优先按句子/换行等自然边界组合 chunk。
+            // 如果单个自然单元超过 chunkSize，才会退回按 Java 字符数硬切。
             List<RagDocumentChunker.Chunk> chunks = ragDocumentChunker.split(req.content(), chunkSize, overlap);
             int chunkCount = chunks.size();
 
@@ -108,6 +111,7 @@ public class RagService {
             // 这样接口响应里能直接观察“检索到了什么”和“最终用了什么”。
             List<RagReferenceResp> references = filterUsedReferences(retrievedReferences, maxDistance);
             List<RagReferenceResp> rejectedReferences = filterRejectedReferences(retrievedReferences, maxDistance);
+            List<RagCitationResp> citations = buildCitations(references);
 
             // RAG 的第二步是 Augmented Generation(模型根据资料生成回答)：
             // 把检索到的资料作为 context 放进 System Prompt，再让 Chat Model 回答用户问题。
@@ -132,9 +136,10 @@ public class RagService {
                     retrievedReferences.size(),
                     references.size(),
                     rejectedReferences.size(),
+                    citations,
                     references,
                     rejectedReferences,
-                    "references 是实际进入 Prompt 的资料；rejectedReferences 是被 maxDistance 过滤掉的候选资料。"
+                    "citations 是适合展示的引用摘要；references 是实际进入 Prompt 的完整资料；rejectedReferences 是被 maxDistance 过滤掉的候选资料。"
             );
         } catch (RuntimeException ex) {
             throw new AiRagException("RAG 问答失败", ex);
@@ -201,6 +206,28 @@ public class RagService {
         return "%s - chunk %d/%d".formatted(documentTitle, chunkIndex, chunkCount);
     }
 
+    private List<RagCitationResp> buildCitations(List<RagReferenceResp> references) {
+        // citations 和 buildContext(...) 使用同一个顺序生成“资料 N”。
+        // 这样模型回答里如果提到“根据资料 1”，接口返回的 citations[0].label 也是“资料 1”。
+        List<RagCitationResp> citations = new ArrayList<>();
+        for (int i = 0; i < references.size(); i++) {
+            RagReferenceResp reference = references.get(i);
+            citations.add(new RagCitationResp(
+                    buildReferenceLabel(i),
+                    reference.id(),
+                    reference.title(),
+                    reference.documentTitle(),
+                    reference.chunkIndex(),
+                    reference.chunkCount(),
+                    reference.chunkStart(),
+                    reference.chunkEnd(),
+                    reference.distance(),
+                    reference.similarity()
+            ));
+        }
+        return citations;
+    }
+
     private String buildContext(List<RagReferenceResp> references) {
         if (references.isEmpty()) {
             return "没有检索到满足相似度阈值的参考资料。";
@@ -209,7 +236,7 @@ public class RagService {
         StringBuilder context = new StringBuilder();
         for (int i = 0; i < references.size(); i++) {
             RagReferenceResp reference = references.get(i);
-            context.append("资料 ").append(i + 1).append("：\n")
+            context.append(buildReferenceLabel(i)).append("：\n")
                     .append("id: ").append(reference.id()).append("\n")
                     .append("title: ").append(reference.title()).append("\n");
             appendChunkMetadata(context, reference);
@@ -217,6 +244,10 @@ public class RagService {
                     .append("content: ").append(reference.content()).append("\n\n");
         }
         return context.toString();
+    }
+
+    private String buildReferenceLabel(int zeroBasedIndex) {
+        return "资料 " + (zeroBasedIndex + 1);
     }
 
     private void appendChunkMetadata(StringBuilder context, RagReferenceResp reference) {
