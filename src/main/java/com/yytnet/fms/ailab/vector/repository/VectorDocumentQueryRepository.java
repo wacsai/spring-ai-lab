@@ -16,6 +16,9 @@ public interface VectorDocumentQueryRepository extends Repository<AiDocumentEmbe
     // - 右边是本次查询文本生成的 query embedding
     // - distance 越小，代表语义越接近
     // queryEmbedding 同样以字符串参数传入，所以这里也显式 CAST 成 vector。
+    // sourceType/externalId 是可选过滤条件：
+    // - 参数为 null 时，对应条件恒成立，不影响旧的全库检索。
+    // - 参数不为 null 时，先缩小候选 chunk 范围，再计算距离并取 topK。
     @Query(value = """
             SELECT
                 id AS id,
@@ -31,11 +34,15 @@ public interface VectorDocumentQueryRepository extends Repository<AiDocumentEmbe
                 external_id AS externalId,
                 embedding <=> CAST(:queryEmbedding AS vector) AS distance
             FROM ai_document_embedding
+            WHERE (:sourceType IS NULL OR source_type = :sourceType)
+              AND (:externalId IS NULL OR external_id = :externalId)
             ORDER BY embedding <=> CAST(:queryEmbedding AS vector)
             LIMIT :topK
             """, nativeQuery = true)
     List<VectorSearchProjection> searchByCosineDistance(
             @Param("queryEmbedding") String queryEmbedding,
-            @Param("topK") int topK
+            @Param("topK") int topK,
+            @Param("sourceType") String sourceType,
+            @Param("externalId") String externalId
     );
 }

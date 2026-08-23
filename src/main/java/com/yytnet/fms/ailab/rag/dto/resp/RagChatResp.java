@@ -7,6 +7,8 @@ public record RagChatResp(
         String answer,
         int topK,
         double maxDistance,
+        String sourceType,
+        String externalId,
         int retrievedCount,
         int usedCount,
         int rejectedCount,

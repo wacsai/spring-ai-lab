@@ -68,7 +68,7 @@ public class VectorDocumentService {
             int topK = req.topK() == null ? DEFAULT_TOP_K : req.topK();
 
             float[] queryEmbedding = embedAndValidate(req.query());
-            List<VectorSearchItemResp> results = searchSimilarDocuments(queryEmbedding, topK);
+            List<VectorSearchItemResp> results = searchSimilarDocuments(queryEmbedding, topK, null, null);
 
             return new VectorSearchResp(
                     req.query(),
@@ -89,9 +89,22 @@ public class VectorDocumentService {
      * 后者属于 RAG Service 的职责。</p>
      */
     public List<VectorSearchItemResp> searchSimilarDocuments(String query, int topK) {
+        return searchSimilarDocuments(query, topK, null, null);
+    }
+
+    /**
+     * 给 RAG 等内部能力复用的相似文档检索方法，支持按来源缩小检索范围。
+     *
+     * <p>注意：sourceType / externalId 会传到 SQL 的 WHERE 条件里，
+     * 先限定候选 chunk，再按向量距离排序取 topK。</p>
+     */
+    public List<VectorSearchItemResp> searchSimilarDocuments(String query,
+                                                             int topK,
+                                                             String sourceType,
+                                                             String externalId) {
         try {
             float[] queryEmbedding = embedAndValidate(query);
-            return searchSimilarDocuments(queryEmbedding, topK);
+            return searchSimilarDocuments(queryEmbedding, topK, sourceType, externalId);
         } catch (RuntimeException ex) {
             throw new AiVectorStoreException("文档相似度检索失败", ex);
         }
@@ -138,12 +151,16 @@ public class VectorDocumentService {
         }
     }
 
-    private List<VectorSearchItemResp> searchSimilarDocuments(float[] queryEmbedding, int topK) {
+    private List<VectorSearchItemResp> searchSimilarDocuments(float[] queryEmbedding,
+                                                             int topK,
+                                                             String sourceType,
+                                                             String externalId) {
         // 检索流程和入库流程的前半段一致：
         // 用户问题也要先变成同一个 embedding 模型生成的 2560 维向量。
         // 只有“查询向量”和“文档向量”在同一个向量空间里，pgvector 的距离计算才有意义。
+        // sourceType/externalId 为 null 时，Repository 的可选 WHERE 条件不会限制来源。
         return vectorDocumentQueryRepository
-                .searchByCosineDistance(pgVectorLiteralConverter.toLiteral(queryEmbedding), topK)
+                .searchByCosineDistance(pgVectorLiteralConverter.toLiteral(queryEmbedding), topK, sourceType, externalId)
                 .stream()
                 .map(row -> new VectorSearchItemResp(
                         row.getId(),

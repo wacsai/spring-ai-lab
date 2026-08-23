@@ -155,10 +155,17 @@ public class RagService {
         try {
             int topK = req.topK() == null ? DEFAULT_TOP_K : req.topK();
             double maxDistance = req.maxDistance() == null ? DEFAULT_MAX_DISTANCE : req.maxDistance();
+            String sourceType = normalizeOptional(req.sourceType());
+            String externalId = normalizeOptional(req.externalId());
 
             // RAG 的第一步是 Retrieval(程序查资料)：
             // 先复用 vector 模块，把用户问题转成 query embedding，再用 pgvector 找相似资料。
-            List<RagReferenceResp> retrievedReferences = vectorDocumentService.searchSimilarDocuments(req.question(), topK)
+            // sourceType / externalId 是可选的检索范围过滤：
+            // - 不传：从整个 ai_document_embedding 表里找相似 chunk。
+            // - 传 sourceType：只从某类来源里找，例如 MARKDOWN。
+            // - 传 externalId：只从某个外部文档里找，例如 spring-ai-rag-sample.md。
+            List<RagReferenceResp> retrievedReferences = vectorDocumentService
+                    .searchSimilarDocuments(req.question(), topK, sourceType, externalId)
                     .stream()
                     .map(this::toReference)
                     .toList();
@@ -190,13 +197,15 @@ public class RagService {
                     content == null ? "" : content,
                     topK,
                     maxDistance,
+                    sourceType,
+                    externalId,
                     retrievedReferences.size(),
                     references.size(),
                     rejectedReferences.size(),
                     citations,
                     references,
                     rejectedReferences,
-                    "citations 是适合展示的引用摘要；references 是实际进入 Prompt 的完整资料；rejectedReferences 是被 maxDistance 过滤掉的候选资料。"
+                    "sourceType/externalId 是可选检索范围过滤；citations 是适合展示的引用摘要；references 是实际进入 Prompt 的完整资料；rejectedReferences 是被 maxDistance 过滤掉的候选资料。"
             );
         } catch (RuntimeException ex) {
             throw new AiRagException("RAG 问答失败", ex);

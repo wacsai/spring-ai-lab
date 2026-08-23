@@ -678,3 +678,43 @@ Markdown content
 - `.md` / `.markdown` 上传后，chunk 更倾向于保留 `## RAG`、`## Embedding` 这类标题上下文。
 - 代码块中的 `##` 不会被当成标题切分。
 - 后续可以继续升级为 Markdown AST 解析，或者在 chunk 元数据中保存 headingPath。
+
+---
+
+## ADR-020: RAG 问答支持来源范围过滤
+
+Status: Accepted
+
+### Decision
+
+`POST /api/ai/rag/chat` 请求新增可选过滤条件：
+
+```text
+sourceType
+externalId
+```
+
+检索流程调整为：
+
+```text
+question
+→ 生成 query embedding
+→ SQL WHERE 按 sourceType/externalId 缩小候选 chunk
+→ pgvector cosine distance 排序
+→ topK
+→ maxDistance 过滤
+→ references 进入 Prompt
+```
+
+### Reason
+
+- 真实 RAG 通常不会永远从整个知识库里检索，而是会按来源、文件、业务对象或权限范围缩小候选集合。
+- 当前已经保存 `sourceType` / `sourceName` / `externalId` 元数据，可以先用来源过滤理解 metadata filtering 的作用。
+- 过滤条件必须放在 SQL 查询阶段，而不是拿到全库 topK 后再在 Java 内存中过滤，否则可能漏掉指定来源内真正相关的 chunk。
+
+### Impact
+
+- 不传 `sourceType` / `externalId` 时，旧的全库检索行为保持不变。
+- 传 `sourceType=MARKDOWN` 时，只检索 Markdown 文件导入的 chunk。
+- 传 `externalId=spring-ai-rag-sample.md` 时，只检索这个外部来源对应的 chunk。
+- 当前只是来源范围过滤，不等同于完整权限系统；后续真实业务可以继续扩展 tenantId、userId、role、visibility 等权限字段。
