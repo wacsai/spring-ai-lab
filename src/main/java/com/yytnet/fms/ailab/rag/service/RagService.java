@@ -1,6 +1,7 @@
 package com.yytnet.fms.ailab.rag.service;
 
 import com.yytnet.fms.ailab.common.exception.AiRagException;
+import com.yytnet.fms.ailab.common.exception.BadRequestException;
 import com.yytnet.fms.ailab.rag.dto.req.RagChatReq;
 import com.yytnet.fms.ailab.rag.dto.req.RagDocumentImportReq;
 import com.yytnet.fms.ailab.rag.dto.resp.RagChatResp;
@@ -15,9 +16,16 @@ import org.springframework.ai.chat.client.advisor.SimpleLoggerAdvisor;
 import org.springframework.ai.ollama.api.OllamaChatOptions;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
+import org.springframework.web.multipart.MultipartFile;
 
+import java.io.IOException;
+import java.nio.ByteBuffer;
+import java.nio.charset.CharacterCodingException;
+import java.nio.charset.CodingErrorAction;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Locale;
 
 @Service
 public class RagService {
@@ -25,6 +33,7 @@ public class RagService {
     private static final int DEFAULT_TOP_K = 3;
     private static final double DEFAULT_MAX_DISTANCE = 0.6;
     private static final String DEFAULT_SOURCE_TYPE = "MANUAL";
+    private static final int MAX_CONTENT_LENGTH = 20000;
 
     // RAG 阶段继续挂 SimpleLoggerAdvisor，方便从日志里观察最终发给模型的 context 和 question。
     private static final SimpleLoggerAdvisor SIMPLE_LOGGER_ADVISOR = SimpleLoggerAdvisor.builder()
@@ -63,6 +72,7 @@ public class RagService {
 
     public RagDocumentImportResp importDocument(RagDocumentImportReq req) {
         try {
+            validateImportRequest(req);
             String documentTitle = req.title().strip();
             int chunkSize = req.chunkSize() == null ? RagDocumentChunker.DEFAULT_CHUNK_SIZE : req.chunkSize();
             int overlap = req.overlap() == null ? RagDocumentChunker.DEFAULT_OVERLAP : req.overlap();
@@ -101,9 +111,41 @@ public class RagService {
                     importedChunks,
                     buildImportNote(replaceExisting, deletedCount)
             );
+        } catch (BadRequestException ex) {
+            throw ex;
         } catch (RuntimeException ex) {
             throw new AiRagException("RAG 文档入库失败", ex);
         }
+    }
+
+    public RagDocumentImportResp importFile(MultipartFile file,
+                                            String title,
+                                            Integer chunkSize,
+                                            Integer overlap,
+                                            Boolean replaceExisting) {
+        String originalFilename = validateAndGetOriginalFilename(file);
+        String sourceType = resolveFileSourceType(originalFilename);
+        String content = readUtf8Text(file);
+        if (content.isBlank()) {
+            throw new BadRequestException("文件内容不能为空");
+        }
+        if (content.length() > MAX_CONTENT_LENGTH) {
+            throw new BadRequestException("文件内容不能超过20000个字符");
+        }
+
+        // 文件导入只负责把上传文件转换成现有的纯文本导入请求。
+        // 后续 chunk 切分、embedding 生成、pgvector 入库仍然复用 importDocument(...)，避免两套入库逻辑分叉。
+        RagDocumentImportReq req = new RagDocumentImportReq(
+                resolveFileTitle(title, originalFilename),
+                content,
+                chunkSize,
+                overlap,
+                replaceExisting,
+                sourceType,
+                originalFilename,
+                originalFilename
+        );
+        return importDocument(req);
     }
 
     public RagChatResp chat(RagChatReq req) {
@@ -245,6 +287,101 @@ public class RagService {
             return DEFAULT_SOURCE_TYPE;
         }
         return normalizedSourceType;
+    }
+
+    private void validateImportRequest(RagDocumentImportReq req) {
+        if (req.title() == null || req.title().isBlank()) {
+            throw new BadRequestException("标题不能为空");
+        }
+        if (req.title().length() > 200) {
+            throw new BadRequestException("标题不能超过200个字符");
+        }
+        if (req.content() == null || req.content().isBlank()) {
+            throw new BadRequestException("内容不能为空");
+        }
+        if (req.content().length() > MAX_CONTENT_LENGTH) {
+            throw new BadRequestException("内容不能超过20000个字符");
+        }
+        if (req.chunkSize() != null && (req.chunkSize() < 100 || req.chunkSize() > 2000)) {
+            throw new BadRequestException("chunkSize必须在100到2000之间");
+        }
+        if (req.overlap() != null && (req.overlap() < 0 || req.overlap() > 500)) {
+            throw new BadRequestException("overlap必须在0到500之间");
+        }
+        int resolvedChunkSize = req.chunkSize() == null ? RagDocumentChunker.DEFAULT_CHUNK_SIZE : req.chunkSize();
+        int resolvedOverlap = req.overlap() == null ? RagDocumentChunker.DEFAULT_OVERLAP : req.overlap();
+        if (resolvedOverlap >= resolvedChunkSize) {
+            throw new BadRequestException("overlap必须小于chunkSize");
+        }
+        String normalizedSourceType = normalizeOptional(req.sourceType());
+        if (normalizedSourceType != null && !isSupportedSourceType(normalizedSourceType)) {
+            throw new BadRequestException("sourceType只支持MANUAL、TEXT、MARKDOWN、PDF、URL");
+        }
+        if (req.sourceName() != null && req.sourceName().length() > 200) {
+            throw new BadRequestException("sourceName不能超过200个字符");
+        }
+        if (req.externalId() != null && req.externalId().length() > 500) {
+            throw new BadRequestException("externalId不能超过500个字符");
+        }
+    }
+
+    private boolean isSupportedSourceType(String sourceType) {
+        return "MANUAL".equals(sourceType)
+                || "TEXT".equals(sourceType)
+                || "MARKDOWN".equals(sourceType)
+                || "PDF".equals(sourceType)
+                || "URL".equals(sourceType);
+    }
+
+    private String validateAndGetOriginalFilename(MultipartFile file) {
+        if (file == null || file.isEmpty()) {
+            throw new BadRequestException("文件不能为空");
+        }
+
+        String originalFilename = file.getOriginalFilename();
+        if (originalFilename == null || originalFilename.isBlank()) {
+            throw new BadRequestException("文件名不能为空");
+        }
+
+        return originalFilename.strip();
+    }
+
+    private String readUtf8Text(MultipartFile file) {
+        try {
+            return StandardCharsets.UTF_8
+                    .newDecoder()
+                    .onMalformedInput(CodingErrorAction.REPORT)
+                    .onUnmappableCharacter(CodingErrorAction.REPORT)
+                    .decode(ByteBuffer.wrap(file.getBytes()))
+                    .toString();
+        } catch (CharacterCodingException ex) {
+            throw new BadRequestException("文件必须使用UTF-8编码");
+        } catch (IOException ex) {
+            throw new AiRagException("读取上传文件失败", ex);
+        }
+    }
+
+    private String resolveFileSourceType(String filename) {
+        String lowerFilename = filename.toLowerCase(Locale.ROOT);
+        if (lowerFilename.endsWith(".md") || lowerFilename.endsWith(".markdown")) {
+            return "MARKDOWN";
+        }
+        if (lowerFilename.endsWith(".txt")) {
+            return "TEXT";
+        }
+        throw new BadRequestException("只支持上传.txt或.md文件");
+    }
+
+    private String resolveFileTitle(String title, String originalFilename) {
+        String normalizedTitle = normalizeOptional(title);
+        if (normalizedTitle != null) {
+            return normalizedTitle;
+        }
+        int dotIndex = originalFilename.lastIndexOf('.');
+        if (dotIndex <= 0) {
+            return originalFilename;
+        }
+        return originalFilename.substring(0, dotIndex);
     }
 
     private String resolveSourceName(String sourceName, String documentTitle) {

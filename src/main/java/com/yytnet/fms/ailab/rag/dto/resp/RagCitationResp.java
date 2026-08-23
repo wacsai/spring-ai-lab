@@ -23,7 +23,7 @@ public record RagCitationResp(
         Integer chunkStart,
         // 当前 chunk 在清洗后原文中的结束字符位置。
         Integer chunkEnd,
-        // 来源类型，例如 MANUAL、MARKDOWN、PDF、URL。
+        // 来源类型，例如 MANUAL、TEXT、MARKDOWN、PDF、URL。
         String sourceType,
         // 来源名称，例如文件名、网页标题、知识库名称。
         String sourceName,

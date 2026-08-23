@@ -589,7 +589,7 @@ externalId = null
 ### Reason
 
 - 真实 RAG 需要追踪 chunk 来自哪里，而不只是知道来自哪个 documentTitle。
-- `sourceType` 用于区分手动 API 导入、Markdown、PDF、URL 等不同来源。
+- `sourceType` 用于区分手动 API 导入、TXT、Markdown、PDF、URL 等不同来源。
 - `sourceName` 用于展示来源名称，例如文件名、网页标题或知识库名称。
 - `externalId` 用于绑定外部系统里的唯一标识，例如文件路径、对象存储 key、业务表主键或 URL。
 - 当前阶段先只保存和返回元数据，不提前实现 PDF/Markdown/URL 解析。
@@ -599,3 +599,50 @@ externalId = null
 - 旧数据的来源字段允许为 null，不影响现有检索。
 - 新导入的 RAG chunk 默认会带 `MANUAL` 来源信息。
 - 后续实现文档解析、去重、删除、版本管理、权限过滤时，可以基于这些来源字段继续扩展。
+
+---
+
+## ADR-018: RAG 文件导入先支持 TXT 和 Markdown
+
+Status: Accepted
+
+### Decision
+
+新增文件上传接口：
+
+```text
+POST /api/ai/rag/documents/files
+```
+
+使用 Spring Web 自带的 `MultipartFile` 接收 `multipart/form-data`，不新增额外依赖。
+
+当前只支持 UTF-8 文本文件：
+
+```text
+.txt -> sourceType = TEXT
+.md / .markdown -> sourceType = MARKDOWN
+```
+
+文件导入读取文本后，会构造 `RagDocumentImportReq` 并复用已有 `importDocument(...)`：
+
+```text
+读取上传文件文本
+→ 自动填 sourceType/sourceName/externalId
+→ 复用文档切分
+→ 每个 chunk 生成 embedding
+→ 写入 pgvector
+```
+
+### Reason
+
+- 真实 RAG 资料通常来自文件，而不是每次手写 JSON content。
+- TXT 和 Markdown 都是纯文本，能复用现有 chunk、embedding、pgvector 入库链路。
+- 当前阶段不引入 PDF/Word 解析，避免分页、表格、页眉页脚、乱码、OCR 等问题干扰 RAG 主线。
+- 不新增依赖，保持阶段改动最小。
+
+### Impact
+
+- `POST /api/ai/rag/documents` 仍保留，适合手动 JSON 导入。
+- `POST /api/ai/rag/documents/files` 适合上传真实 `.txt` / `.md` 学习资料。
+- `TEXT` 被加入合法 `sourceType`。
+- 后续可以在 Markdown 文件导入基础上继续做标题层级切分，而不是只按标点和长度切分。

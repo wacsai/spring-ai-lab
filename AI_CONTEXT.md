@@ -106,7 +106,7 @@ Spring AI 负责：
 
 当前真实状态：
 
-**RAG 文档来源元数据已实现**
+**RAG TXT / Markdown 文件导入已实现**
 
 当前代码已经从 Controller demo 推进到基础 AI 调用链：
 
@@ -133,7 +133,7 @@ qwen3.5:4b
 当前已完成：
 
 ```text
-代码结构 + 编译验证 + 真实接口调用验证 + System Prompt + 请求级 Model Options + Streaming + SimpleLoggerAdvisor + Structured Output + Tool Calling + Embedding + JPA/PostgreSQL 配置 + pgvector 最小存取接口 + RAG 最小闭环 + RAG 文档切分入库 + RAG 检索诊断 + RAG 自然切分策略 + RAG 引用摘要 + RAG 同名文档替换导入 + RAG 文档来源元数据
+代码结构 + 编译验证 + 真实接口调用验证 + System Prompt + 请求级 Model Options + Streaming + SimpleLoggerAdvisor + Structured Output + Tool Calling + Embedding + JPA/PostgreSQL 配置 + pgvector 最小存取接口 + RAG 最小闭环 + RAG 文档切分入库 + RAG 检索诊断 + RAG 自然切分策略 + RAG 引用摘要 + RAG 同名文档替换导入 + RAG 文档来源元数据 + TXT/Markdown 文件导入
 ```
 
 已验证：
@@ -191,6 +191,13 @@ POST /api/ai/rag/documents
 → 每个 chunk 生成 embedding
 → 每个 chunk 作为独立向量记录写入 pgvector
 → 返回 chunk id / chunkIndex / chunkStart / chunkEnd
+
+POST /api/ai/rag/documents/files
+→ 上传 UTF-8 .txt / .md 文件
+→ .txt 自动 sourceType=TEXT
+→ .md/.markdown 自动 sourceType=MARKDOWN
+→ sourceName/externalId 默认使用原始文件名
+→ 读取文本后复用 POST /api/ai/rag/documents 的入库流程
 ```
 
 当前接口支持：

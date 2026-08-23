@@ -33,7 +33,7 @@ public record RagDocumentImportReq(
 
         // 资料来源类型。不传时默认 MANUAL，表示通过当前 API 手动传入文本。
         // 后续接入 Markdown/PDF/URL 导入时，可以复用这个字段区分来源。
-        @Pattern(regexp = "MANUAL|MARKDOWN|PDF|URL|", message = "sourceType只支持MANUAL、MARKDOWN、PDF、URL")
+        @Pattern(regexp = "MANUAL|TEXT|MARKDOWN|PDF|URL|", message = "sourceType只支持MANUAL、TEXT、MARKDOWN、PDF、URL")
         String sourceType,
 
         // 来源名称，通常是文件名、网页标题、知识库名称；不传时默认使用 title。

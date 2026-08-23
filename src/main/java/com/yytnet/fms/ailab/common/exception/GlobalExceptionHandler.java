@@ -41,6 +41,15 @@ public class GlobalExceptionHandler {
     }
 
     /**
+     * 处理业务层主动抛出的 400 请求错误，例如上传空文件或不支持的文件类型。
+     */
+    @ExceptionHandler(BadRequestException.class)
+    public ResponseEntity<ErrorResp> handleBadRequestException(BadRequestException ex) {
+        return ResponseEntity.badRequest()
+                .body(new ErrorResp(HttpStatus.BAD_REQUEST.value(), ex.getMessage(), List.of()));
+    }
+
+    /**
      * 处理模型结构化输出失败异常
      */
     @ExceptionHandler(AiStructuredOutputException.class)
