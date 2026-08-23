@@ -106,7 +106,7 @@ Spring AI 负责：
 
 当前真实状态：
 
-**RAG Markdown 低价值 chunk 合并已实现**
+**RAG 稳定来源身份替换已实现**
 
 当前代码已经从 Controller demo 推进到基础 AI 调用链：
 
@@ -133,7 +133,7 @@ qwen3.5:4b
 当前已完成：
 
 ```text
-代码结构 + 编译验证 + 真实接口调用验证 + System Prompt + 请求级 Model Options + Streaming + SimpleLoggerAdvisor + Structured Output + Tool Calling + Embedding + JPA/PostgreSQL 配置 + pgvector 最小存取接口 + RAG 最小闭环 + RAG 文档切分入库 + RAG 检索诊断 + RAG 自然切分策略 + RAG 引用摘要 + RAG 同名文档替换导入 + RAG 文档来源元数据 + TXT/Markdown 文件导入 + Markdown 标题感知切分 + RAG 来源过滤检索 + Markdown 低价值 chunk 合并
+代码结构 + 编译验证 + 真实接口调用验证 + System Prompt + 请求级 Model Options + Streaming + SimpleLoggerAdvisor + Structured Output + Tool Calling + Embedding + JPA/PostgreSQL 配置 + pgvector 最小存取接口 + RAG 最小闭环 + RAG 文档切分入库 + RAG 检索诊断 + RAG 自然切分策略 + RAG 引用摘要 + RAG 同名文档替换导入 + RAG 文档来源元数据 + TXT/Markdown 文件导入 + Markdown 标题感知切分 + RAG 来源过滤检索 + Markdown 低价值 chunk 合并 + RAG 稳定来源身份替换
 ```
 
 已验证：
@@ -185,7 +185,8 @@ POST /api/ai/rag/chat
 POST /api/ai/rag/documents
 → 长文本 content
 → sourceType/sourceName/externalId 记录资料来源
-→ replaceExisting=true 时先删除相同 documentTitle 的旧 chunk
+→ replaceExisting=true 时优先按 sourceType + externalId 删除旧 chunk
+→ 没有 externalId 时回退到 documentTitle 删除旧 chunk
 → 优先按句子/换行自然边界切分
 → 超长自然单元按字符兜底切分
 → 按 chunkSize + overlap 组合多个 chunk
@@ -201,6 +202,7 @@ POST /api/ai/rag/documents/files
 → Markdown 先按标题拆成 section
 → 每个 section 再复用通用 chunker
 → 纯标题或正文过短的 chunk 会合并到相邻 chunk
+→ replaceExisting=true 时按文件 externalId 替换旧 chunk
 → 读取文本后复用 POST /api/ai/rag/documents 的入库流程
 ```
 

@@ -151,6 +151,16 @@ public class VectorDocumentService {
         }
     }
 
+    public int deleteChunksBySourceIdentity(String sourceType, String externalId) {
+        try {
+            // 文件导入、URL 导入、外部业务系统导入时，sourceType + externalId 比 documentTitle 更稳定。
+            // 例如同一个文件重新上传但 title 改了，仍然可以删除旧 chunk。
+            return vectorDocumentCommandRepository.deleteChunksBySourceIdentity(sourceType, externalId);
+        } catch (RuntimeException ex) {
+            throw new AiVectorStoreException("按来源标识删除旧文档片段失败", ex);
+        }
+    }
+
     private List<VectorSearchItemResp> searchSimilarDocuments(float[] queryEmbedding,
                                                              int topK,
                                                              String sourceType,

@@ -28,7 +28,9 @@ public record RagDocumentImportReq(
         Integer overlap,
 
         // 学习阶段经常会反复导入同一篇文档。
-        // true 表示先删除相同 title 对应的旧 chunk，再写入本次新切分出来的 chunk，避免检索时命中重复资料。
+        // true 表示先删除旧 chunk，再写入本次新切分出来的 chunk，避免检索时命中重复资料。
+        // 删除范围优先使用 sourceType + externalId；没有 externalId 时才回退到 title。
+        // 这样同一个文件即使换了展示标题，也能通过稳定的 externalId 替换旧版本。
         Boolean replaceExisting,
 
         // 资料来源类型。不传时默认 MANUAL，表示通过当前 API 手动传入文本。

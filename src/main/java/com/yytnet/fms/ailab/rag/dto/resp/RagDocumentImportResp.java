@@ -9,6 +9,7 @@ public record RagDocumentImportResp(
         int overlap,
         boolean replaceExisting,
         int deletedCount,
+        String replaceScope,
         String sourceType,
         String sourceName,
         String externalId,

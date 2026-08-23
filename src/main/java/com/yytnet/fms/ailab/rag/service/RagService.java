@@ -92,7 +92,12 @@ public class RagService {
             // 其他文本仍然直接按句子/换行等自然边界组合 chunk。
             List<RagDocumentChunker.Chunk> chunks = splitDocument(req.content(), chunkSize, overlap, sourceType);
             int chunkCount = chunks.size();
-            int deletedCount = deleteExistingChunksIfNecessary(documentTitle, replaceExisting);
+            DeletionResult deletionResult = deleteExistingChunksIfNecessary(
+                    documentTitle,
+                    sourceType,
+                    externalId,
+                    replaceExisting
+            );
 
             // 这里逐个 chunk 入库，而不是整篇文档只存一条向量。
             // 这样用户提问时，pgvector 可以命中更精确的片段，而不是返回整篇文档的“平均语义”。
@@ -106,13 +111,14 @@ public class RagService {
                     chunkSize,
                     overlap,
                     replaceExisting,
-                    deletedCount,
+                    deletionResult.deletedCount(),
+                    deletionResult.replaceScope(),
                     sourceType,
                     sourceName,
                     externalId,
                     chunkCount,
                     importedChunks,
-                    buildImportNote(replaceExisting, deletedCount)
+                    buildImportNote(replaceExisting, deletionResult)
             );
         } catch (BadRequestException ex) {
             throw ex;
@@ -277,20 +283,37 @@ public class RagService {
         );
     }
 
-    private int deleteExistingChunksIfNecessary(String documentTitle, boolean replaceExisting) {
+    private DeletionResult deleteExistingChunksIfNecessary(String documentTitle,
+                                                           String sourceType,
+                                                           String externalId,
+                                                           boolean replaceExisting) {
         if (!replaceExisting) {
-            return 0;
+            return new DeletionResult(0, "NONE");
         }
+
+        if (externalId != null) {
+            // 文件导入和外部系统导入通常都有稳定 externalId。
+            // 优先按 sourceType + externalId 删除旧 chunk，避免用户改了 title 后旧版本残留。
+            int deletedCount = vectorDocumentService.deleteChunksBySourceIdentity(sourceType, externalId);
+            return new DeletionResult(deletedCount, "SOURCE_IDENTITY");
+        }
+
         // 只在调用方明确传 replaceExisting=true 时清理同名旧 chunk。
-        // 这适合学习阶段反复导入同一份资料，避免检索结果里出现重复内容。
-        return vectorDocumentService.deleteChunksByDocumentTitle(documentTitle);
+        // 没有 externalId 的手动文本，仍然回退到 documentTitle，兼容之前的学习接口行为。
+        int deletedCount = vectorDocumentService.deleteChunksByDocumentTitle(documentTitle);
+        return new DeletionResult(deletedCount, "DOCUMENT_TITLE");
     }
 
-    private String buildImportNote(boolean replaceExisting, int deletedCount) {
+    private String buildImportNote(boolean replaceExisting, DeletionResult deletionResult) {
         if (!replaceExisting) {
             return "长文档已按 chunk 切分；每个 chunk 已生成 embedding 并写入 pgvector。";
         }
-        return "已先删除相同文档标题的旧 chunk %d 条，再写入本次新切分的 chunk。".formatted(deletedCount);
+        if ("SOURCE_IDENTITY".equals(deletionResult.replaceScope())) {
+            return "已先按 sourceType + externalId 删除旧 chunk %d 条，再写入本次新切分的 chunk。"
+                    .formatted(deletionResult.deletedCount());
+        }
+        return "已先按 documentTitle 删除旧 chunk %d 条，再写入本次新切分的 chunk。"
+                .formatted(deletionResult.deletedCount());
     }
 
     private String resolveSourceType(String sourceType) {
@@ -500,5 +523,11 @@ public class RagService {
             return;
         }
         context.append(name).append(": ").append(value).append("\n");
+    }
+
+    private record DeletionResult(
+            int deletedCount,
+            String replaceScope
+    ) {
     }
 }

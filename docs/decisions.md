@@ -747,3 +747,47 @@ Markdown 标题感知切分后，额外合并低价值 chunk：
 - 重新导入 Markdown 文件后，纯标题不再单独成为一条向量记录。
 - chunk 数量可能比之前减少，例如原来 7 个 chunk 可能变成 6 个。
 - 旧数据不会自动变化，需要使用 `replaceExisting=true` 重新导入同一文档。
+
+---
+
+## ADR-022: replaceExisting 优先使用稳定来源身份
+
+Status: Accepted
+
+### Decision
+
+RAG 文档重新导入时，`replaceExisting=true` 的删除范围调整为：
+
+```text
+有 externalId
+→ 按 sourceType + externalId 删除旧 chunk
+
+没有 externalId
+→ 回退按 documentTitle 删除旧 chunk
+```
+
+响应新增：
+
+```text
+replaceScope
+```
+
+用于说明本次替换旧 chunk 使用的范围：
+
+```text
+NONE
+SOURCE_IDENTITY
+DOCUMENT_TITLE
+```
+
+### Reason
+
+- `documentTitle` 更像展示标题，用户可能会修改，不适合作为外部文档的稳定身份。
+- `externalId` 更适合表示外部来源唯一标识，例如文件名、文件路径、对象存储 key、URL 或业务主键。
+- 对文件导入来说，当前 `externalId` 默认使用原始文件名；重新上传同一个文件时，即使 title 改了，也应该替换旧 chunk，而不是留下两个版本。
+
+### Impact
+
+- 文件导入时，`replaceExisting=true` 会优先删除相同 `sourceType + externalId` 的旧 chunk。
+- 手动 JSON 导入如果没有传 `externalId`，仍然保持旧行为：按 `documentTitle` 删除。
+- 这是学习阶段的“单一当前版本”策略，不保留历史版本；真实业务后续可以增加 document 表、version、contentHash、status 等字段。

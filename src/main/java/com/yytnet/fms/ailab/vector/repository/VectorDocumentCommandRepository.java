@@ -103,4 +103,18 @@ public class VectorDocumentCommandRepository {
         query.setParameter("documentTitle", documentTitle);
         return query.executeUpdate();
     }
+
+    @Transactional
+    public int deleteChunksBySourceIdentity(String sourceType, String externalId) {
+        // source_type + external_id 表示一个外部来源的稳定身份。
+        // 对文件导入来说 external_id 默认是原始文件名；后续可以换成文件路径、对象存储 key 或业务主键。
+        Query query = entityManager.createNativeQuery("""
+                DELETE FROM ai_document_embedding
+                WHERE source_type = :sourceType
+                  AND external_id = :externalId
+                """);
+        query.setParameter("sourceType", sourceType);
+        query.setParameter("externalId", externalId);
+        return query.executeUpdate();
+    }
 }
