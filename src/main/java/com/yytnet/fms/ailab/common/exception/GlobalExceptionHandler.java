@@ -102,4 +102,13 @@ public class GlobalExceptionHandler {
         return ResponseEntity.status(HttpStatus.BAD_GATEWAY)
                 .body(new ErrorResp(HttpStatus.BAD_GATEWAY.value(), ex.getMessage(), List.of()));
     }
+
+    /**
+     * 处理 Agent 调用失败异常
+     */
+    @ExceptionHandler(AiAgentException.class)
+    public ResponseEntity<ErrorResp> handleAiAgentException(AiAgentException ex) {
+        return ResponseEntity.status(HttpStatus.BAD_GATEWAY)
+                .body(new ErrorResp(HttpStatus.BAD_GATEWAY.value(), ex.getMessage(), List.of()));
+    }
 }

@@ -886,3 +886,57 @@ note
 - 清理一个 `conversationId` 不影响其他会话。
 - 清理后再次使用同一个 `conversationId`，会从空上下文开始。
 - 该接口只对当前 Spring Boot 进程内的 Memory 生效；应用重启后本来就没有旧内存消息。
+
+---
+
+## ADR-025: Agent 先实现学习助手最小闭环
+
+Status: Accepted
+
+### Decision
+
+新增接口：
+
+```text
+POST /api/ai/agent/study
+```
+
+第一版 Agent 组合：
+
+```text
+ChatClient
+MessageChatMemoryAdvisor
+LearningProgressTool
+SimpleLoggerAdvisor
+固定 System Prompt 目标边界
+```
+
+请求使用：
+
+```text
+conversationId
+message
+```
+
+响应返回：
+
+```text
+conversationId
+content
+agentType = study-agent-v1
+memoryMessageCount
+maxMemoryMessages
+note
+```
+
+### Reason
+
+- 用户已经完成 ChatClient、Tool Calling、Embedding、RAG 和 Chat Memory 的基础学习，Agent 可以作为这些能力的组合入口。
+- 第一版 Agent 不做复杂通用任务执行，只围绕“Spring AI 学习规划”工作，降低失控和认知负担。
+- 复用 `LearningProgressTool` 可以让模型通过工具获取当前项目状态；复用 Chat Memory 可以让 Agent 具有会话状态。
+
+### Impact
+
+- 当前 Agent 是最小闭环，不是完整多步 Agent Loop。
+- 当前不执行文件修改、数据库写入、系统命令或外部请求。
+- 后续可以继续增加显式状态对象、计划/执行/观察循环、最多步数、停止条件、工具权限和审计日志。

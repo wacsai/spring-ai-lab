@@ -71,6 +71,9 @@ Last Updated: 2026-08-24
 - [x] 已使用 `MessageWindowChatMemory + InMemoryChatMemoryRepository` 保存 JVM 内存会话消息
 - [x] 已通过 `conversationId` 实现会话级上下文隔离
 - [x] 已提供 `DELETE /api/ai/memory/conversations/{conversationId}` 清理指定会话 Memory
+- [x] 已提供 `POST /api/ai/agent/study`
+- [x] 已实现学习助手 Agent 最小闭环：ChatClient + LearningProgressTool + Chat Memory + 固定目标边界
+- [x] 已更新 `LearningProgressTool` 的固定学习进度到当前阶段
 
 ### GPU / Docker
 
@@ -99,7 +102,7 @@ Last Updated: 2026-08-24
 
 ## Current Stage
 
-**Chat Memory 会话清理接口已实现**
+**Agent 学习助手最小闭环已实现**
 
 当前真实状态：
 
@@ -197,25 +200,48 @@ ChatMemory.clear(conversationId)
 清空当前 conversationId 的 JVM 内存消息窗口
 ```
 
-当前代码已经完成最小闭环、System Prompt 模板、请求级模型参数覆盖、普通调用、流式调用、基础 Advisor 挂载、结构化输出、Tool Calling 基础接口、带参数 Tool、Embedding 最小接口、JPA/PostgreSQL 依赖接入、pgvector 初始化脚本、文档向量入库接口、精确相似度检索接口、最小 RAG 问答接口、RAG 文档切分入库接口、RAG 检索诊断字段、RAG 引用摘要、同名文档替换导入、来源元数据、TXT/Markdown 文件上传导入、Markdown 标题感知切分、RAG 来源过滤检索、Markdown 低价值 chunk 合并、RAG 稳定来源身份替换、Chat Memory JVM 内存版最小闭环和 Chat Memory 会话清理接口。
+Agent 学习助手链路：
 
-当前数据库配置已启动到执行 schema 阶段；`vector(2560)` 字段可保留，但当前 pgvector HNSW 索引最多支持 2000 维，因此初始化脚本暂不创建 HNSW 索引。向量入库、检索代码、最小 RAG 接口、RAG 文档切分入库接口、RAG 检索诊断字段和 RAG 自然切分策略已编译通过，并已通过真实请求验证。RAG 引用摘要、同名文档替换导入、来源元数据、TXT/Markdown 文件上传导入、Markdown 标题感知切分、RAG 来源过滤检索、Markdown 低价值 chunk 合并和 RAG 稳定来源身份替换已完成代码实现。Chat Memory JVM 内存版和会话清理接口已完成代码实现，待真实接口调用验证。
+```text
+Client
+↓
+POST /api/ai/agent/study
+↓
+StudyAgentController
+↓
+StudyAgentService
+↓
+MessageChatMemoryAdvisor 读取 conversationId 历史消息
+↓
+LearningProgressTool 提供当前学习状态
+↓
+ChatClient
+↓
+qwen3.5:4b
+↓
+基于工具结果 + 会话上下文回答学习下一步
+```
+
+当前代码已经完成最小闭环、System Prompt 模板、请求级模型参数覆盖、普通调用、流式调用、基础 Advisor 挂载、结构化输出、Tool Calling 基础接口、带参数 Tool、Embedding 最小接口、JPA/PostgreSQL 依赖接入、pgvector 初始化脚本、文档向量入库接口、精确相似度检索接口、最小 RAG 问答接口、RAG 文档切分入库接口、RAG 检索诊断字段、RAG 引用摘要、同名文档替换导入、来源元数据、TXT/Markdown 文件上传导入、Markdown 标题感知切分、RAG 来源过滤检索、Markdown 低价值 chunk 合并、RAG 稳定来源身份替换、Chat Memory JVM 内存版最小闭环、Chat Memory 会话清理接口和 Agent 学习助手最小闭环。
+
+当前数据库配置已启动到执行 schema 阶段；`vector(2560)` 字段可保留，但当前 pgvector HNSW 索引最多支持 2000 维，因此初始化脚本暂不创建 HNSW 索引。向量入库、检索代码、最小 RAG 接口、RAG 文档切分入库接口、RAG 检索诊断字段和 RAG 自然切分策略已编译通过，并已通过真实请求验证。RAG 引用摘要、同名文档替换导入、来源元数据、TXT/Markdown 文件上传导入、Markdown 标题感知切分、RAG 来源过滤检索、Markdown 低价值 chunk 合并和 RAG 稳定来源身份替换已完成代码实现。Chat Memory JVM 内存版和会话清理接口已完成代码实现。Agent 学习助手最小闭环已完成代码实现，待真实接口调用验证。
 
 ## Next Task
 
-进入 **Chat Memory 后续增强**：
+进入 **Agent 后续增强**：
 
 ```text
 真实接口验证
-→ 对比 JDBC/Redis 持久化 Memory
+→ 解释 Agent 与 Tool Calling / Workflow 的区别
+→ 增加显式状态对象
+→ 增加多步执行循环和停止条件
 ```
 
 验收标准：
 
-- 同一个 conversationId 下能记住上一轮对话
-- 不同 conversationId 之间上下文隔离
-- 清理 conversationId 后同一会话从空上下文开始
-- 重启 Spring Boot 后 JVM 内存版消息会丢失这一限制已明确
+- `/api/ai/agent/study` 能调用学习进度工具
+- 同一个 conversationId 下 Agent 能保留学习对话上下文
+- 明确第一版 Agent 尚未实现多步执行循环
 
 ## Pending
 
@@ -234,7 +260,7 @@ ChatMemory.clear(conversationId)
 - [x] RAG 稳定来源身份替换
 - [x] Chat Memory JVM 内存版最小闭环
 - [x] Chat Memory 会话清理接口
-- [ ] Agent
+- [x] Agent 学习助手最小闭环
 - [ ] MCP
 - [ ] Observability
 - [ ] Evaluation

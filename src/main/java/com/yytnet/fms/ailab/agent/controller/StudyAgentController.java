@@ -1,0 +1,30 @@
+package com.yytnet.fms.ailab.agent.controller;
+
+import com.yytnet.fms.ailab.agent.dto.req.StudyAgentReq;
+import com.yytnet.fms.ailab.agent.dto.resp.StudyAgentResp;
+import com.yytnet.fms.ailab.agent.service.StudyAgentService;
+import jakarta.validation.Valid;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
+
+@RestController
+@RequestMapping("/api/ai/agent")
+public class StudyAgentController {
+
+    private final StudyAgentService studyAgentService;
+
+    public StudyAgentController(StudyAgentService studyAgentService) {
+        this.studyAgentService = studyAgentService;
+    }
+
+    /**
+     * 学习助手 Agent 最小闭环：
+     * 把模型、学习进度工具、Chat Memory 和固定目标边界组合起来。
+     */
+    @PostMapping("/study")
+    public StudyAgentResp chat(@Valid @RequestBody StudyAgentReq req) {
+        return studyAgentService.chat(req);
+    }
+}

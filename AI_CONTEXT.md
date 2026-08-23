@@ -106,7 +106,7 @@ Spring AI 负责：
 
 当前真实状态：
 
-**Chat Memory 会话清理接口已实现**
+**Agent 学习助手最小闭环已实现**
 
 当前代码已经从 Controller demo 推进到基础 AI 调用链：
 
@@ -133,7 +133,7 @@ qwen3.5:4b
 当前已完成：
 
 ```text
-代码结构 + 编译验证 + 真实接口调用验证 + System Prompt + 请求级 Model Options + Streaming + SimpleLoggerAdvisor + Structured Output + Tool Calling + Embedding + JPA/PostgreSQL 配置 + pgvector 最小存取接口 + RAG 最小闭环 + RAG 文档切分入库 + RAG 检索诊断 + RAG 自然切分策略 + RAG 引用摘要 + RAG 同名文档替换导入 + RAG 文档来源元数据 + TXT/Markdown 文件导入 + Markdown 标题感知切分 + RAG 来源过滤检索 + Markdown 低价值 chunk 合并 + RAG 稳定来源身份替换 + Chat Memory JVM 内存版最小闭环 + Chat Memory 会话清理接口
+代码结构 + 编译验证 + 真实接口调用验证 + System Prompt + 请求级 Model Options + Streaming + SimpleLoggerAdvisor + Structured Output + Tool Calling + Embedding + JPA/PostgreSQL 配置 + pgvector 最小存取接口 + RAG 最小闭环 + RAG 文档切分入库 + RAG 检索诊断 + RAG 自然切分策略 + RAG 引用摘要 + RAG 同名文档替换导入 + RAG 文档来源元数据 + TXT/Markdown 文件导入 + Markdown 标题感知切分 + RAG 来源过滤检索 + Markdown 低价值 chunk 合并 + RAG 稳定来源身份替换 + Chat Memory JVM 内存版最小闭环 + Chat Memory 会话清理接口 + Agent 学习助手最小闭环
 ```
 
 已验证：
@@ -216,6 +216,13 @@ DELETE /api/ai/memory/conversations/{conversationId}
 → 清空指定 conversationId 对应的 JVM 内存消息窗口
 → 不影响其他 conversationId
 → 再次使用该 conversationId 时从空上下文开始
+
+POST /api/ai/agent/study
+→ conversationId 作为 Agent 会话状态
+→ MessageChatMemoryAdvisor 提供历史对话上下文
+→ LearningProgressTool 提供当前学习进度状态
+→ ChatClient 基于固定目标边界生成学习建议
+→ 返回 answer + agentType + memoryMessageCount
 ```
 
 当前接口支持：
@@ -239,6 +246,12 @@ POST /api/ai/structured/movie/extract
 
 ```text
 POST /api/ai/tool/chat
+```
+
+当前 Agent 接口：
+
+```text
+POST /api/ai/agent/study
 ```
 
 当前 Embedding 接口：
