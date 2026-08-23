@@ -845,3 +845,44 @@ conversationId
 - Spring Boot 重启后内存消息全部丢失。
 - 多实例部署时不同实例之间不共享 Memory。
 - 后续可以替换为 JDBC、Redis 或其他持久化 ChatMemoryRepository。
+
+---
+
+## ADR-024: Chat Memory 增加会话清理接口
+
+Status: Accepted
+
+### Decision
+
+新增接口：
+
+```text
+DELETE /api/ai/memory/conversations/{conversationId}
+```
+
+该接口调用：
+
+```text
+ChatMemory.clear(conversationId)
+```
+
+响应返回：
+
+```text
+conversationId
+cleared
+memoryMessageCount
+note
+```
+
+### Reason
+
+- Chat Memory 需要能主动清理指定会话，否则学习阶段无法方便验证“清理前后上下文是否变化”。
+- 真实聊天系统通常需要新建会话、清空会话、切换会话等能力。
+- 当前阶段只清理 JVM 内存中的指定 conversationId，不引入数据库和持久化历史管理。
+
+### Impact
+
+- 清理一个 `conversationId` 不影响其他会话。
+- 清理后再次使用同一个 `conversationId`，会从空上下文开始。
+- 该接口只对当前 Spring Boot 进程内的 Memory 生效；应用重启后本来就没有旧内存消息。

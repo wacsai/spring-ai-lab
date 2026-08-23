@@ -4,6 +4,7 @@ import com.yytnet.fms.ailab.common.exception.AiMemoryException;
 import com.yytnet.fms.ailab.memory.config.MemoryChatConfig;
 import com.yytnet.fms.ailab.memory.dto.req.MemoryChatReq;
 import com.yytnet.fms.ailab.memory.dto.resp.MemoryChatResp;
+import com.yytnet.fms.ailab.memory.dto.resp.MemoryClearResp;
 import org.springframework.ai.chat.client.ChatClient;
 import org.springframework.ai.chat.client.advisor.MessageChatMemoryAdvisor;
 import org.springframework.ai.chat.client.advisor.SimpleLoggerAdvisor;
@@ -76,6 +77,23 @@ public class MemoryChatService {
             );
         } catch (RuntimeException ex) {
             throw new AiMemoryException("Chat Memory 调用失败", ex);
+        }
+    }
+
+    public MemoryClearResp clear(String conversationId) {
+        try {
+            String normalizedConversationId = conversationId.strip();
+            // clear(...) 只清理当前 conversationId 对应的 JVM 内存消息窗口。
+            // 这不会影响其他 conversationId，也不会删除任何数据库数据。
+            chatMemory.clear(normalizedConversationId);
+            return new MemoryClearResp(
+                    normalizedConversationId,
+                    true,
+                    chatMemory.get(normalizedConversationId).size(),
+                    "已清空当前 conversationId 的 JVM 内存消息；再次使用该 conversationId 时会从空上下文开始。"
+            );
+        } catch (RuntimeException ex) {
+            throw new AiMemoryException("清理 Chat Memory 失败", ex);
         }
     }
 }
