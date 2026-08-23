@@ -646,3 +646,35 @@ POST /api/ai/rag/documents/files
 - `POST /api/ai/rag/documents/files` 适合上传真实 `.txt` / `.md` 学习资料。
 - `TEXT` 被加入合法 `sourceType`。
 - 后续可以在 Markdown 文件导入基础上继续做标题层级切分，而不是只按标点和长度切分。
+
+---
+
+## ADR-019: Markdown 文档先使用标题感知切分
+
+Status: Accepted
+
+### Decision
+
+当导入文档的 `sourceType = MARKDOWN` 时，RAG 入库不再直接把整篇 Markdown 交给通用 chunker，而是先执行：
+
+```text
+Markdown content
+→ 按 # / ## / ### 等标题行拆成 section
+→ 每个 section 内部复用 RagDocumentChunker
+→ section 被拆成多个 chunk 时，为后续 chunk 补回标题上下文
+```
+
+普通 `MANUAL` / `TEXT` 文本仍然走原来的自然边界切分。
+
+### Reason
+
+- Markdown 自带标题结构，标题通常表达当前段落主题。
+- 直接按长度或标点切分可能让 chunk 缺少标题上下文，模型只看到正文时不容易判断资料主题。
+- 先按标题拆 section，再复用通用 chunker，可以在不引入 Markdown AST 解析库的前提下提升 chunk 语义完整性。
+- 当前阶段仍保持最小实现，不提前处理表格、链接、图片、Front Matter、复杂嵌套列表等完整 Markdown 语法。
+
+### Impact
+
+- `.md` / `.markdown` 上传后，chunk 更倾向于保留 `## RAG`、`## Embedding` 这类标题上下文。
+- 代码块中的 `##` 不会被当成标题切分。
+- 后续可以继续升级为 Markdown AST 解析，或者在 chunk 元数据中保存 headingPath。

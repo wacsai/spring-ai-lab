@@ -58,15 +58,18 @@ public class RagService {
     private final ChatClient chatClient;
     private final VectorDocumentService vectorDocumentService;
     private final RagDocumentChunker ragDocumentChunker;
+    private final RagMarkdownDocumentChunker ragMarkdownDocumentChunker;
     private final String model;
 
     public RagService(ChatClient.Builder chatClientBuilder,
                       VectorDocumentService vectorDocumentService,
                       RagDocumentChunker ragDocumentChunker,
+                      RagMarkdownDocumentChunker ragMarkdownDocumentChunker,
                       @Value("${spring.ai.ollama.chat.model}") String model) {
         this.chatClient = chatClientBuilder.build();
         this.vectorDocumentService = vectorDocumentService;
         this.ragDocumentChunker = ragDocumentChunker;
+        this.ragMarkdownDocumentChunker = ragMarkdownDocumentChunker;
         this.model = model;
     }
 
@@ -85,9 +88,9 @@ public class RagService {
             // 1. 把一篇长文档切成多个 chunk。
             // 2. 每个 chunk 单独生成 embedding。
             // 3. 每个 chunk 单独写入 pgvector。
-            // 当前切分器优先按句子/换行等自然边界组合 chunk。
-            // 如果单个自然单元超过 chunkSize，才会退回按 Java 字符数硬切。
-            List<RagDocumentChunker.Chunk> chunks = ragDocumentChunker.split(req.content(), chunkSize, overlap);
+            // Markdown 会先按标题切成 section，再在 section 内复用通用 chunker；
+            // 其他文本仍然直接按句子/换行等自然边界组合 chunk。
+            List<RagDocumentChunker.Chunk> chunks = splitDocument(req.content(), chunkSize, overlap, sourceType);
             int chunkCount = chunks.size();
             int deletedCount = deleteExistingChunksIfNecessary(documentTitle, replaceExisting);
 
@@ -331,6 +334,16 @@ public class RagService {
                 || "MARKDOWN".equals(sourceType)
                 || "PDF".equals(sourceType)
                 || "URL".equals(sourceType);
+    }
+
+    private List<RagDocumentChunker.Chunk> splitDocument(String content,
+                                                         int chunkSize,
+                                                         int overlap,
+                                                         String sourceType) {
+        if ("MARKDOWN".equals(sourceType)) {
+            return ragMarkdownDocumentChunker.split(content, chunkSize, overlap);
+        }
+        return ragDocumentChunker.split(content, chunkSize, overlap);
     }
 
     private String validateAndGetOriginalFilename(MultipartFile file) {
