@@ -2,7 +2,10 @@ package com.yytnet.fms.ailab.rag.service;
 
 import com.yytnet.fms.ailab.common.exception.AiRagException;
 import com.yytnet.fms.ailab.rag.dto.req.RagChatReq;
+import com.yytnet.fms.ailab.rag.dto.req.RagDocumentImportReq;
 import com.yytnet.fms.ailab.rag.dto.resp.RagChatResp;
+import com.yytnet.fms.ailab.rag.dto.resp.RagDocumentChunkResp;
+import com.yytnet.fms.ailab.rag.dto.resp.RagDocumentImportResp;
 import com.yytnet.fms.ailab.rag.dto.resp.RagReferenceResp;
 import com.yytnet.fms.ailab.vector.dto.resp.VectorSearchItemResp;
 import com.yytnet.fms.ailab.vector.service.VectorDocumentService;
@@ -42,14 +45,50 @@ public class RagService {
 
     private final ChatClient chatClient;
     private final VectorDocumentService vectorDocumentService;
+    private final RagDocumentChunker ragDocumentChunker;
     private final String model;
 
     public RagService(ChatClient.Builder chatClientBuilder,
                       VectorDocumentService vectorDocumentService,
+                      RagDocumentChunker ragDocumentChunker,
                       @Value("${spring.ai.ollama.chat.model}") String model) {
         this.chatClient = chatClientBuilder.build();
         this.vectorDocumentService = vectorDocumentService;
+        this.ragDocumentChunker = ragDocumentChunker;
         this.model = model;
+    }
+
+    public RagDocumentImportResp importDocument(RagDocumentImportReq req) {
+        try {
+            int chunkSize = req.chunkSize() == null ? RagDocumentChunker.DEFAULT_CHUNK_SIZE : req.chunkSize();
+            int overlap = req.overlap() == null ? RagDocumentChunker.DEFAULT_OVERLAP : req.overlap();
+
+            // 文档导入阶段只做 RAG 的“知识入库”：
+            // 1. 把一篇长文档切成多个 chunk。
+            // 2. 每个 chunk 单独生成 embedding。
+            // 3. 每个 chunk 单独写入 pgvector。
+            // 当前切分器按 Java 字符数截取，所以可能切断句子；后续会升级成段落/标题/token 等更自然的切分策略。
+            List<RagDocumentChunker.Chunk> chunks = ragDocumentChunker.split(req.content(), chunkSize, overlap);
+            int chunkCount = chunks.size();
+
+            // 这里逐个 chunk 入库，而不是整篇文档只存一条向量。
+            // 这样用户提问时，pgvector 可以命中更精确的片段，而不是返回整篇文档的“平均语义”。
+            List<RagDocumentChunkResp> importedChunks = chunks.stream()
+                    .map(chunk -> importChunk(req.title(), chunk, chunkCount))
+                    .toList();
+
+            return new RagDocumentImportResp(
+                    req.title(),
+                    req.content().strip().length(),
+                    chunkSize,
+                    overlap,
+                    chunkCount,
+                    importedChunks,
+                    "长文档已按 chunk 切分；每个 chunk 已生成 embedding 并写入 pgvector。"
+            );
+        } catch (RuntimeException ex) {
+            throw new AiRagException("RAG 文档入库失败", ex);
+        }
     }
 
     public RagChatResp chat(RagChatReq req) {
@@ -57,7 +96,7 @@ public class RagService {
             int topK = req.topK() == null ? DEFAULT_TOP_K : req.topK();
             double maxDistance = req.maxDistance() == null ? DEFAULT_MAX_DISTANCE : req.maxDistance();
 
-            // RAG 的第一步是 Retrieval：
+            // RAG 的第一步是 Retrieval(程序查资料)：
             // 先复用 vector 模块，把用户问题转成 query embedding，再用 pgvector 找相似资料。
             List<RagReferenceResp> references = vectorDocumentService.searchSimilarDocuments(req.question(), topK)
                     .stream()
@@ -66,7 +105,7 @@ public class RagService {
                     .map(this::toReference)
                     .toList();
 
-            // RAG 的第二步是 Augmented Generation：
+            // RAG 的第二步是 Augmented Generation(模型根据资料生成回答)：
             // 把检索到的资料作为 context 放进 System Prompt，再让 Chat Model 回答用户问题。
             String content = chatClient.prompt()
                     .system(system -> system
@@ -99,9 +138,45 @@ public class RagService {
                 item.id(),
                 item.title(),
                 item.content(),
+                item.documentTitle(),
+                item.chunkIndex(),
+                item.chunkCount(),
+                item.chunkStart(),
+                item.chunkEnd(),
                 item.distance(),
                 item.similarity()
         );
+    }
+
+    private RagDocumentChunkResp importChunk(String documentTitle,
+                                             RagDocumentChunker.Chunk chunk,
+                                             int chunkCount) {
+        String chunkTitle = buildChunkTitle(documentTitle, chunk.chunkIndex(), chunkCount);
+        // createChunk(...) 内部会调用 EmbeddingModel.embed(chunk.text())。
+        // 也就是说，每个 chunk 都会得到一个独立的 2560 维向量，并保存 chunk 的起止位置元数据。
+        Long id = vectorDocumentService.createChunk(
+                documentTitle,
+                chunkTitle,
+                chunk.text(),
+                chunk.chunkIndex(),
+                chunkCount,
+                chunk.start(),
+                chunk.end()
+        );
+
+        return new RagDocumentChunkResp(
+                id,
+                chunk.chunkIndex(),
+                chunkCount,
+                chunk.start(),
+                chunk.end(),
+                chunk.text().length(),
+                chunkTitle
+        );
+    }
+
+    private String buildChunkTitle(String documentTitle, int chunkIndex, int chunkCount) {
+        return "%s - chunk %d/%d".formatted(documentTitle, chunkIndex, chunkCount);
     }
 
     private String buildContext(List<RagReferenceResp> references) {
@@ -114,10 +189,23 @@ public class RagService {
             RagReferenceResp reference = references.get(i);
             context.append("资料 ").append(i + 1).append("：\n")
                     .append("id: ").append(reference.id()).append("\n")
-                    .append("title: ").append(reference.title()).append("\n")
-                    .append("distance: ").append(reference.distance()).append("\n")
+                    .append("title: ").append(reference.title()).append("\n");
+            appendChunkMetadata(context, reference);
+            context.append("distance: ").append(reference.distance()).append("\n")
                     .append("content: ").append(reference.content()).append("\n\n");
         }
         return context.toString();
+    }
+
+    private void appendChunkMetadata(StringBuilder context, RagReferenceResp reference) {
+        if (reference.documentTitle() == null || reference.chunkIndex() == null) {
+            return;
+        }
+
+        context.append("documentTitle: ").append(reference.documentTitle()).append("\n")
+                .append("chunk: ").append(reference.chunkIndex()).append("/")
+                .append(reference.chunkCount()).append("\n")
+                .append("range: ").append(reference.chunkStart()).append("-")
+                .append(reference.chunkEnd()).append("\n");
     }
 }

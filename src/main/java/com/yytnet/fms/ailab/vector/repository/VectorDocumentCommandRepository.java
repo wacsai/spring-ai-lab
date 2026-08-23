@@ -30,4 +30,51 @@ public class VectorDocumentCommandRepository {
         Number id = (Number) query.getSingleResult();
         return id.longValue();
     }
+
+    @Transactional
+    public Long saveChunk(String title,
+                          String content,
+                          String embeddingLiteral,
+                          String documentTitle,
+                          int chunkIndex,
+                          int chunkCount,
+                          int chunkStart,
+                          int chunkEnd) {
+        // RAG 文档切分后，每个 chunk 都是一条独立向量记录。
+        // document_title/chunk_index/chunk_start/chunk_end 用来让检索结果能定位回原文档中的具体片段。
+        Query query = entityManager.createNativeQuery("""
+                INSERT INTO ai_document_embedding (
+                    title,
+                    content,
+                    embedding,
+                    document_title,
+                    chunk_index,
+                    chunk_count,
+                    chunk_start,
+                    chunk_end
+                )
+                VALUES (
+                    :title,
+                    :content,
+                    CAST(:embedding AS vector),
+                    :documentTitle,
+                    :chunkIndex,
+                    :chunkCount,
+                    :chunkStart,
+                    :chunkEnd
+                )
+                RETURNING id
+                """);
+        query.setParameter("title", title);
+        query.setParameter("content", content);
+        query.setParameter("embedding", embeddingLiteral);
+        query.setParameter("documentTitle", documentTitle);
+        query.setParameter("chunkIndex", chunkIndex);
+        query.setParameter("chunkCount", chunkCount);
+        query.setParameter("chunkStart", chunkStart);
+        query.setParameter("chunkEnd", chunkEnd);
+
+        Number id = (Number) query.getSingleResult();
+        return id.longValue();
+    }
 }

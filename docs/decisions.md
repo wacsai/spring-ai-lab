@@ -381,3 +381,48 @@ question
 - `POST /api/ai/rag/chat` 用于观察“检索结果如何影响模型回答”。
 - response 返回 `references`，便于学习阶段确认模型回答前实际拿到了哪些资料。
 - 后续真实 RAG 阶段需要补充文档切分、数据导入、召回阈值调优和引用格式优化。
+
+---
+
+## ADR-013: RAG 文档入库先使用字符切分和重叠窗口
+
+Status: Accepted
+
+### Decision
+
+新增文档入库接口：
+
+```text
+POST /api/ai/rag/documents
+```
+
+当前切分策略：
+
+```text
+chunkSize 默认 500 字符
+overlap 默认 80 字符
+下一段起点 = 当前段结束位置 - overlap
+```
+
+每个 chunk 都作为独立向量记录写入 `ai_document_embedding`，并保存以下元数据：
+
+```text
+document_title
+chunk_index
+chunk_count
+chunk_start
+chunk_end
+```
+
+### Reason
+
+- 真实 RAG 不应只存短句；长文档需要拆成更小片段，检索时才能命中更精确的上下文。
+- 字符切分 + overlap 实现简单，适合当前学习阶段观察 chunk、embedding、references 的关系。
+- 保存 chunk 元数据后，RAG references 可以定位到原文档中的具体片段。
+- 当前阶段先不引入 PDF/Word 解析、Markdown 结构解析、tokenizer、rerank 或权限过滤。
+
+### Impact
+
+- 旧的短文本向量记录仍然可用，新增 chunk 元数据列均为可空字段。
+- `POST /api/ai/rag/chat` 的 references 会返回 document/chunk 元数据。
+- 后续可以把字符切分替换成 Markdown 标题切分、段落切分或 token 切分，而不影响 pgvector 检索主流程。

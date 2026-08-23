@@ -97,6 +97,31 @@ public class VectorDocumentService {
         }
     }
 
+    public Long createChunk(String documentTitle,
+                            String chunkTitle,
+                            String content,
+                            int chunkIndex,
+                            int chunkCount,
+                            int chunkStart,
+                            int chunkEnd) {
+        try {
+            // 一个长文档会被拆成多个 chunk；每个 chunk 都单独生成 embedding 并作为一条记录写入 pgvector。
+            float[] embedding = embedAndValidate(content);
+            return vectorDocumentCommandRepository.saveChunk(
+                    chunkTitle,
+                    content,
+                    pgVectorLiteralConverter.toLiteral(embedding),
+                    documentTitle,
+                    chunkIndex,
+                    chunkCount,
+                    chunkStart,
+                    chunkEnd
+            );
+        } catch (RuntimeException ex) {
+            throw new AiVectorStoreException("文档片段向量入库失败", ex);
+        }
+    }
+
     private List<VectorSearchItemResp> searchSimilarDocuments(float[] queryEmbedding, int topK) {
         // 检索流程和入库流程的前半段一致：
         // 用户问题也要先变成同一个 embedding 模型生成的 2560 维向量。
@@ -108,6 +133,11 @@ public class VectorDocumentService {
                         row.getId(),
                         row.getTitle(),
                         row.getContent(),
+                        row.getDocumentTitle(),
+                        row.getChunkIndex(),
+                        row.getChunkCount(),
+                        row.getChunkStart(),
+                        row.getChunkEnd(),
                         row.getDistance(),
                         toSimilarity(row.getDistance())
                 ))

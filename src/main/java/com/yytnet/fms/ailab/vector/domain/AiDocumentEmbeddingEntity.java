@@ -24,6 +24,21 @@ public class AiDocumentEmbeddingEntity {
 
     private String content;
 
+    @Column(name = "document_title")
+    private String documentTitle;
+
+    @Column(name = "chunk_index")
+    private Integer chunkIndex;
+
+    @Column(name = "chunk_count")
+    private Integer chunkCount;
+
+    @Column(name = "chunk_start")
+    private Integer chunkStart;
+
+    @Column(name = "chunk_end")
+    private Integer chunkEnd;
+
     @Column(name = "created_at")
     private OffsetDateTime createdAt;
 
@@ -40,6 +55,26 @@ public class AiDocumentEmbeddingEntity {
 
     public String getContent() {
         return content;
+    }
+
+    public String getDocumentTitle() {
+        return documentTitle;
+    }
+
+    public Integer getChunkIndex() {
+        return chunkIndex;
+    }
+
+    public Integer getChunkCount() {
+        return chunkCount;
+    }
+
+    public Integer getChunkStart() {
+        return chunkStart;
+    }
+
+    public Integer getChunkEnd() {
+        return chunkEnd;
     }
 
     public OffsetDateTime getCreatedAt() {

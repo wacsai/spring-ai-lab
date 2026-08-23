@@ -14,5 +14,15 @@ public interface VectorSearchProjection {
 
     String getContent();
 
+    String getDocumentTitle();
+
+    Integer getChunkIndex();
+
+    Integer getChunkCount();
+
+    Integer getChunkStart();
+
+    Integer getChunkEnd();
+
     Double getDistance();
 }

@@ -50,6 +50,10 @@ Last Updated: 2026-08-18
 - [x] 已实现最小 RAG 闭环：向量检索参考资料后交给 ChatClient 回答
 - [x] 已为 RAG 增加 `maxDistance` 阈值，避免明显无关资料进入 Prompt
 - [x] 已通过真实接口验证 `POST /api/ai/rag/chat` 可返回 answer + references
+- [x] 已提供 `POST /api/ai/rag/documents`
+- [x] 已实现按 `chunkSize + overlap` 切分长文档
+- [x] 已实现 chunk 批量生成 embedding 并写入 pgvector
+- [x] 已为向量记录增加 document/chunk 元数据，便于 references 定位具体片段
 
 ### GPU / Docker
 
@@ -78,9 +82,27 @@ Last Updated: 2026-08-18
 
 ## Current Stage
 
-**RAG 最小闭环已实现并通过真实接口验证**
+**RAG 文档切分 + 批量入库已实现并通过真实接口验证**
 
 当前真实状态：
+
+```text
+Client
+↓
+RagController
+↓
+RagService
+↓
+RagDocumentChunker
+↓
+VectorDocumentService.createChunk()
+↓
+EmbeddingModel + PostgreSQL 18 + pgvector
+↓
+多条 chunk 向量记录
+```
+
+RAG 问答链路：
 
 ```text
 Client
@@ -102,31 +124,32 @@ qwen3.5:4b
 基于参考资料回答
 ```
 
-当前代码已经完成最小闭环、System Prompt 模板、请求级模型参数覆盖、普通调用、流式调用、基础 Advisor 挂载、结构化输出、Tool Calling 基础接口、带参数 Tool、Embedding 最小接口、JPA/PostgreSQL 依赖接入、pgvector 初始化脚本、文档向量入库接口、精确相似度检索接口和最小 RAG 问答接口。
+当前代码已经完成最小闭环、System Prompt 模板、请求级模型参数覆盖、普通调用、流式调用、基础 Advisor 挂载、结构化输出、Tool Calling 基础接口、带参数 Tool、Embedding 最小接口、JPA/PostgreSQL 依赖接入、pgvector 初始化脚本、文档向量入库接口、精确相似度检索接口、最小 RAG 问答接口和 RAG 文档切分入库接口。
 
-当前数据库配置已启动到执行 schema 阶段；`vector(2560)` 字段可保留，但当前 pgvector HNSW 索引最多支持 2000 维，因此初始化脚本暂不创建 HNSW 索引。向量入库、检索代码和最小 RAG 接口已编译通过，并已通过真实请求验证。
+当前数据库配置已启动到执行 schema 阶段；`vector(2560)` 字段可保留，但当前 pgvector HNSW 索引最多支持 2000 维，因此初始化脚本暂不创建 HNSW 索引。向量入库、检索代码、最小 RAG 接口和 RAG 文档切分入库接口已编译通过，并已通过真实请求验证。
 
 ## Next Task
 
 进入 **RAG 后续增强**：
 
 ```text
-文档切分
-→ 批量导入
-→ 召回阈值调优
+召回阈值调优
 → 引用格式优化
+→ 更自然的切分策略
+→ 文档解析
 ```
 
 验收标准：
 
-- 一段长文档可以拆成多个片段入库
-- RAG 返回的 references 能定位到具体片段
-- 对无关问题的拒答更稳定
+- references 更少返回低相关资料
+- 引用信息更适合展示给用户
+- 切分策略减少英文单词或句子边界截断
 
 ## Pending
 
 - [x] PostgreSQL + pgvector
 - [x] RAG 最小闭环
+- [x] RAG 文档切分真实接口验证
 - [ ] RAG 后续增强
 - [ ] Chat Memory
 - [ ] Agent
