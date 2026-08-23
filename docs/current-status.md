@@ -64,6 +64,7 @@ Last Updated: 2026-08-23
 - [x] 已支持 UTF-8 `.txt` / `.md` 文件上传导入并复用现有 RAG 文档入库流程
 - [x] 已实现 Markdown 标题感知切分：Markdown 先按标题拆 section，再在 section 内复用通用 chunker
 - [x] 已为 `POST /api/ai/rag/chat` 增加 `sourceType` / `externalId` 可选来源过滤
+- [x] 已优化 Markdown 切分，纯标题或正文过短的低价值 chunk 会合并到相邻 chunk
 
 ### GPU / Docker
 
@@ -92,7 +93,7 @@ Last Updated: 2026-08-23
 
 ## Current Stage
 
-**RAG 来源过滤检索已实现**
+**RAG Markdown 低价值 chunk 合并已实现**
 
 当前真实状态：
 
@@ -108,6 +109,8 @@ RagService
 Markdown sourceType 先按标题拆 section
 ↓
 RagDocumentChunker
+↓
+纯标题/正文过短的低价值 chunk 合并到相邻 chunk
 ↓
 replaceExisting=true 时删除同名旧 chunk
 ↓
@@ -150,9 +153,9 @@ qwen3.5:4b
 基于参考资料回答
 ```
 
-当前代码已经完成最小闭环、System Prompt 模板、请求级模型参数覆盖、普通调用、流式调用、基础 Advisor 挂载、结构化输出、Tool Calling 基础接口、带参数 Tool、Embedding 最小接口、JPA/PostgreSQL 依赖接入、pgvector 初始化脚本、文档向量入库接口、精确相似度检索接口、最小 RAG 问答接口、RAG 文档切分入库接口、RAG 检索诊断字段、RAG 引用摘要、同名文档替换导入、来源元数据、TXT/Markdown 文件上传导入、Markdown 标题感知切分和 RAG 来源过滤检索。
+当前代码已经完成最小闭环、System Prompt 模板、请求级模型参数覆盖、普通调用、流式调用、基础 Advisor 挂载、结构化输出、Tool Calling 基础接口、带参数 Tool、Embedding 最小接口、JPA/PostgreSQL 依赖接入、pgvector 初始化脚本、文档向量入库接口、精确相似度检索接口、最小 RAG 问答接口、RAG 文档切分入库接口、RAG 检索诊断字段、RAG 引用摘要、同名文档替换导入、来源元数据、TXT/Markdown 文件上传导入、Markdown 标题感知切分、RAG 来源过滤检索和 Markdown 低价值 chunk 合并。
 
-当前数据库配置已启动到执行 schema 阶段；`vector(2560)` 字段可保留，但当前 pgvector HNSW 索引最多支持 2000 维，因此初始化脚本暂不创建 HNSW 索引。向量入库、检索代码、最小 RAG 接口、RAG 文档切分入库接口、RAG 检索诊断字段和 RAG 自然切分策略已编译通过，并已通过真实请求验证。RAG 引用摘要、同名文档替换导入、来源元数据、TXT/Markdown 文件上传导入、Markdown 标题感知切分和 RAG 来源过滤检索已完成代码实现，待下一次真实接口调用验证响应结构。
+当前数据库配置已启动到执行 schema 阶段；`vector(2560)` 字段可保留，但当前 pgvector HNSW 索引最多支持 2000 维，因此初始化脚本暂不创建 HNSW 索引。向量入库、检索代码、最小 RAG 接口、RAG 文档切分入库接口、RAG 检索诊断字段和 RAG 自然切分策略已编译通过，并已通过真实请求验证。RAG 引用摘要、同名文档替换导入、来源元数据、TXT/Markdown 文件上传导入、Markdown 标题感知切分、RAG 来源过滤检索和 Markdown 低价值 chunk 合并已完成代码实现，待下一次真实接口调用验证响应结构。
 
 ## Next Task
 
@@ -182,6 +185,7 @@ qwen3.5:4b
 - [x] RAG TXT / Markdown 文件导入
 - [x] RAG Markdown 标题感知切分
 - [x] RAG 来源过滤检索
+- [x] RAG Markdown 低价值 chunk 合并
 - [ ] RAG 后续增强
 - [ ] Chat Memory
 - [ ] Agent

@@ -718,3 +718,32 @@ question
 - 传 `sourceType=MARKDOWN` 时，只检索 Markdown 文件导入的 chunk。
 - 传 `externalId=spring-ai-rag-sample.md` 时，只检索这个外部来源对应的 chunk。
 - 当前只是来源范围过滤，不等同于完整权限系统；后续真实业务可以继续扩展 tenantId、userId、role、visibility 等权限字段。
+
+---
+
+## ADR-021: Markdown 切分合并低价值 chunk
+
+Status: Accepted
+
+### Decision
+
+Markdown 标题感知切分后，额外合并低价值 chunk：
+
+```text
+纯标题 chunk
+正文长度很短的 chunk
+→ 合并到相邻 chunk
+→ 重新生成连续 chunkIndex
+```
+
+### Reason
+
+- Markdown 文档开头的一级标题经常只是文档名，单独生成 embedding 后容易被 RAG 检索召回，但不能提供可回答问题的正文依据。
+- 正文过短的 chunk 信息量不足，会浪费 Prompt 空间，也会干扰 references 观察。
+- 这个问题属于入库前的切分质量问题，应优先在 chunker 内修正，而不是在检索或 Prompt 阶段临时过滤。
+
+### Impact
+
+- 重新导入 Markdown 文件后，纯标题不再单独成为一条向量记录。
+- chunk 数量可能比之前减少，例如原来 7 个 chunk 可能变成 6 个。
+- 旧数据不会自动变化，需要使用 `replaceExisting=true` 重新导入同一文档。
