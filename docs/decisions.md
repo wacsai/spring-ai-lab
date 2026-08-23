@@ -791,3 +791,57 @@ DOCUMENT_TITLE
 - 文件导入时，`replaceExisting=true` 会优先删除相同 `sourceType + externalId` 的旧 chunk。
 - 手动 JSON 导入如果没有传 `externalId`，仍然保持旧行为：按 `documentTitle` 删除。
 - 这是学习阶段的“单一当前版本”策略，不保留历史版本；真实业务后续可以增加 document 表、version、contentHash、status 等字段。
+
+---
+
+## ADR-023: Chat Memory 先使用 JVM 内存窗口
+
+Status: Accepted
+
+### Decision
+
+新增 Chat Memory 最小接口：
+
+```text
+POST /api/ai/memory/chat
+```
+
+请求使用：
+
+```text
+conversationId
+message
+```
+
+当前 Memory 实现：
+
+```text
+MessageChatMemoryAdvisor
+MessageWindowChatMemory
+InMemoryChatMemoryRepository
+maxMessages = 20
+```
+
+调用链路：
+
+```text
+conversationId
+→ ChatMemory.CONVERSATION_ID / chat_memory_conversation_id
+→ MessageChatMemoryAdvisor 读取历史消息
+→ ChatClient 调用模型
+→ MessageChatMemoryAdvisor 写回用户消息和模型回答
+```
+
+### Reason
+
+- Chat Memory 的核心不是模型永久记住信息，而是应用按会话保存历史消息，并在下一次请求时重新提供给模型。
+- 当前阶段先使用 Spring AI 官方 Memory Advisor，学习方式更接近真实企业代码。
+- JVM 内存版不需要新增数据库表和持久化逻辑，适合先验证同一个 `conversationId` 下的多轮上下文保留。
+
+### Impact
+
+- 同一个 `conversationId` 会共享一组最近消息窗口。
+- 不同 `conversationId` 之间上下文隔离。
+- Spring Boot 重启后内存消息全部丢失。
+- 多实例部署时不同实例之间不共享 Memory。
+- 后续可以替换为 JDBC、Redis 或其他持久化 ChatMemoryRepository。

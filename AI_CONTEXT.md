@@ -106,7 +106,7 @@ Spring AI 负责：
 
 当前真实状态：
 
-**RAG 稳定来源身份替换已实现**
+**Chat Memory JVM 内存版最小闭环已实现**
 
 当前代码已经从 Controller demo 推进到基础 AI 调用链：
 
@@ -133,7 +133,7 @@ qwen3.5:4b
 当前已完成：
 
 ```text
-代码结构 + 编译验证 + 真实接口调用验证 + System Prompt + 请求级 Model Options + Streaming + SimpleLoggerAdvisor + Structured Output + Tool Calling + Embedding + JPA/PostgreSQL 配置 + pgvector 最小存取接口 + RAG 最小闭环 + RAG 文档切分入库 + RAG 检索诊断 + RAG 自然切分策略 + RAG 引用摘要 + RAG 同名文档替换导入 + RAG 文档来源元数据 + TXT/Markdown 文件导入 + Markdown 标题感知切分 + RAG 来源过滤检索 + Markdown 低价值 chunk 合并 + RAG 稳定来源身份替换
+代码结构 + 编译验证 + 真实接口调用验证 + System Prompt + 请求级 Model Options + Streaming + SimpleLoggerAdvisor + Structured Output + Tool Calling + Embedding + JPA/PostgreSQL 配置 + pgvector 最小存取接口 + RAG 最小闭环 + RAG 文档切分入库 + RAG 检索诊断 + RAG 自然切分策略 + RAG 引用摘要 + RAG 同名文档替换导入 + RAG 文档来源元数据 + TXT/Markdown 文件导入 + Markdown 标题感知切分 + RAG 来源过滤检索 + Markdown 低价值 chunk 合并 + RAG 稳定来源身份替换 + Chat Memory JVM 内存版最小闭环
 ```
 
 已验证：
@@ -204,6 +204,13 @@ POST /api/ai/rag/documents/files
 → 纯标题或正文过短的 chunk 会合并到相邻 chunk
 → replaceExisting=true 时按文件 externalId 替换旧 chunk
 → 读取文本后复用 POST /api/ai/rag/documents 的入库流程
+
+POST /api/ai/memory/chat
+→ conversationId 作为会话隔离标识
+→ MessageChatMemoryAdvisor 读取当前 conversationId 的历史消息
+→ 把历史消息 + 本轮用户消息交给 ChatClient
+→ 模型回答后把 UserMessage / AssistantMessage 写回 JVM 内存窗口
+→ 返回回答内容和当前 memoryMessageCount
 ```
 
 当前接口支持：

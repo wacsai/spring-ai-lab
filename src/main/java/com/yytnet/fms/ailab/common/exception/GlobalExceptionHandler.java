@@ -93,4 +93,13 @@ public class GlobalExceptionHandler {
         return ResponseEntity.status(HttpStatus.BAD_GATEWAY)
                 .body(new ErrorResp(HttpStatus.BAD_GATEWAY.value(), ex.getMessage(), List.of()));
     }
+
+    /**
+     * 处理 Chat Memory 调用失败异常
+     */
+    @ExceptionHandler(AiMemoryException.class)
+    public ResponseEntity<ErrorResp> handleAiMemoryException(AiMemoryException ex) {
+        return ResponseEntity.status(HttpStatus.BAD_GATEWAY)
+                .body(new ErrorResp(HttpStatus.BAD_GATEWAY.value(), ex.getMessage(), List.of()));
+    }
 }
