@@ -98,12 +98,16 @@ public class RagService {
 
             // RAG 的第一步是 Retrieval(程序查资料)：
             // 先复用 vector 模块，把用户问题转成 query embedding，再用 pgvector 找相似资料。
-            List<RagReferenceResp> references = vectorDocumentService.searchSimilarDocuments(req.question(), topK)
+            List<RagReferenceResp> retrievedReferences = vectorDocumentService.searchSimilarDocuments(req.question(), topK)
                     .stream()
-                    // 当前最小 RAG 增加一个距离阈值，避免“不相关但排名靠前”的资料被塞给模型。
-                    .filter(item -> item.distance() <= maxDistance)
                     .map(this::toReference)
                     .toList();
+
+            // retrievedReferences 是 pgvector 按 topK 取回的原始候选。
+            // references 是真正进入 Prompt 的资料；rejectedReferences 是因为距离超过 maxDistance 被过滤掉的资料。
+            // 这样接口响应里能直接观察“检索到了什么”和“最终用了什么”。
+            List<RagReferenceResp> references = filterUsedReferences(retrievedReferences, maxDistance);
+            List<RagReferenceResp> rejectedReferences = filterRejectedReferences(retrievedReferences, maxDistance);
 
             // RAG 的第二步是 Augmented Generation(模型根据资料生成回答)：
             // 把检索到的资料作为 context 放进 System Prompt，再让 Chat Model 回答用户问题。
@@ -125,12 +129,30 @@ public class RagService {
                     content == null ? "" : content,
                     topK,
                     maxDistance,
+                    retrievedReferences.size(),
+                    references.size(),
+                    rejectedReferences.size(),
                     references,
-                    "RAG = 先用 pgvector 检索参考资料，再把参考资料交给 ChatClient 生成回答。"
+                    rejectedReferences,
+                    "references 是实际进入 Prompt 的资料；rejectedReferences 是被 maxDistance 过滤掉的候选资料。"
             );
         } catch (RuntimeException ex) {
             throw new AiRagException("RAG 问答失败", ex);
         }
+    }
+
+    private List<RagReferenceResp> filterUsedReferences(List<RagReferenceResp> retrievedReferences,
+                                                        double maxDistance) {
+        return retrievedReferences.stream()
+                .filter(reference -> reference.distance() <= maxDistance)
+                .toList();
+    }
+
+    private List<RagReferenceResp> filterRejectedReferences(List<RagReferenceResp> retrievedReferences,
+                                                            double maxDistance) {
+        return retrievedReferences.stream()
+                .filter(reference -> reference.distance() > maxDistance)
+                .toList();
     }
 
     private RagReferenceResp toReference(VectorSearchItemResp item) {

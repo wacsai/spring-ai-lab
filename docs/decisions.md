@@ -426,3 +426,40 @@ chunk_end
 - 旧的短文本向量记录仍然可用，新增 chunk 元数据列均为可空字段。
 - `POST /api/ai/rag/chat` 的 references 会返回 document/chunk 元数据。
 - 后续可以把字符切分替换成 Markdown 标题切分、段落切分或 token 切分，而不影响 pgvector 检索主流程。
+
+---
+
+## ADR-014: RAG 问答响应区分检索候选和实际使用资料
+
+Status: Accepted
+
+### Decision
+
+`POST /api/ai/rag/chat` 响应中新增检索诊断字段：
+
+```text
+retrievedCount
+usedCount
+rejectedCount
+references
+rejectedReferences
+```
+
+含义：
+
+```text
+references = distance <= maxDistance，实际进入 Prompt 的资料
+rejectedReferences = distance > maxDistance，只用于调试观察，不进入 Prompt
+```
+
+### Reason
+
+- 学习阶段需要看清楚 pgvector 返回了哪些候选，以及 maxDistance 过滤掉了哪些候选。
+- 只看最终 answer 不容易判断模型到底参考了什么资料。
+- 区分 used/rejected 后，可以更直观地调试 topK 和 maxDistance。
+
+### Impact
+
+- `references` 继续表示模型实际使用的资料。
+- `rejectedReferences` 可能包含语义较弱的候选，不会进入 Prompt。
+- 后续可以基于这些诊断数据继续调优默认阈值、召回数量和切分策略。

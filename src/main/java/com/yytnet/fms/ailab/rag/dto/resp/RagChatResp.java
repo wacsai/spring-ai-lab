@@ -7,7 +7,11 @@ public record RagChatResp(
         String answer,
         int topK,
         double maxDistance,
+        int retrievedCount,
+        int usedCount,
+        int rejectedCount,
         List<RagReferenceResp> references,
+        List<RagReferenceResp> rejectedReferences,
         String note
 ) {
 }

@@ -106,7 +106,7 @@ Spring AI 负责：
 
 当前真实状态：
 
-**RAG 文档切分 + 批量入库已实现并通过真实接口验证**
+**RAG 检索诊断已实现并通过真实接口验证**
 
 当前代码已经从 Controller demo 推进到基础 AI 调用链：
 
@@ -133,7 +133,7 @@ qwen3.5:4b
 当前已完成：
 
 ```text
-代码结构 + 编译验证 + 真实接口调用验证 + System Prompt + 请求级 Model Options + Streaming + SimpleLoggerAdvisor + Structured Output + Tool Calling + Embedding + JPA/PostgreSQL 配置 + pgvector 最小存取接口 + RAG 最小闭环 + RAG 文档切分入库
+代码结构 + 编译验证 + 真实接口调用验证 + System Prompt + 请求级 Model Options + Streaming + SimpleLoggerAdvisor + Structured Output + Tool Calling + Embedding + JPA/PostgreSQL 配置 + pgvector 最小存取接口 + RAG 最小闭环 + RAG 文档切分入库 + RAG 检索诊断
 ```
 
 已验证：
@@ -179,7 +179,7 @@ POST /api/ai/rag/chat
 → 按 maxDistance 过滤参考资料
 → 把参考资料放入 System Prompt
 → ChatClient 基于资料生成回答
-→ 返回 answer + references
+→ 返回 answer + references + rejectedReferences + 检索计数
 
 POST /api/ai/rag/documents
 → 长文本 content
