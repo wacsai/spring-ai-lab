@@ -384,7 +384,7 @@ question
 
 ---
 
-## ADR-013: RAG 文档入库先使用字符切分和重叠窗口
+## ADR-013: RAG 文档入库使用自然边界优先切分
 
 Status: Accepted
 
@@ -401,7 +401,10 @@ POST /api/ai/rag/documents
 ```text
 chunkSize 默认 500 字符
 overlap 默认 80 字符
-下一段起点 = 当前段结束位置 - overlap
+优先按句号、问号、感叹号、分号、换行等自然边界拆分单元
+多个自然单元组合成 chunk，直到接近 chunkSize
+相邻 chunk 尽量用上一段末尾的完整自然单元做 overlap
+如果单个自然单元超过 chunkSize，再使用字符切分兜底
 ```
 
 每个 chunk 都作为独立向量记录写入 `ai_document_embedding`，并保存以下元数据：
@@ -417,7 +420,8 @@ chunk_end
 ### Reason
 
 - 真实 RAG 不应只存短句；长文档需要拆成更小片段，检索时才能命中更精确的上下文。
-- 字符切分 + overlap 实现简单，适合当前学习阶段观察 chunk、embedding、references 的关系。
+- 自然边界优先切分可以减少英文单词、中文句子和 Markdown 结构被硬截断的情况。
+- 保留字符兜底，避免长代码块、长表格行、无标点文本无法切分。
 - 保存 chunk 元数据后，RAG references 可以定位到原文档中的具体片段。
 - 当前阶段先不引入 PDF/Word 解析、Markdown 结构解析、tokenizer、rerank 或权限过滤。
 
@@ -425,7 +429,7 @@ chunk_end
 
 - 旧的短文本向量记录仍然可用，新增 chunk 元数据列均为可空字段。
 - `POST /api/ai/rag/chat` 的 references 会返回 document/chunk 元数据。
-- 后续可以把字符切分替换成 Markdown 标题切分、段落切分或 token 切分，而不影响 pgvector 检索主流程。
+- 后续可以继续升级为 Markdown 标题切分、段落层级切分或 token 切分，而不影响 pgvector 检索主流程。
 
 ---
 

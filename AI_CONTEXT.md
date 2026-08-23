@@ -106,7 +106,7 @@ Spring AI 负责：
 
 当前真实状态：
 
-**RAG 检索诊断已实现并通过真实接口验证**
+**RAG 自然切分策略已实现并通过真实接口验证**
 
 当前代码已经从 Controller demo 推进到基础 AI 调用链：
 
@@ -133,7 +133,7 @@ qwen3.5:4b
 当前已完成：
 
 ```text
-代码结构 + 编译验证 + 真实接口调用验证 + System Prompt + 请求级 Model Options + Streaming + SimpleLoggerAdvisor + Structured Output + Tool Calling + Embedding + JPA/PostgreSQL 配置 + pgvector 最小存取接口 + RAG 最小闭环 + RAG 文档切分入库 + RAG 检索诊断
+代码结构 + 编译验证 + 真实接口调用验证 + System Prompt + 请求级 Model Options + Streaming + SimpleLoggerAdvisor + Structured Output + Tool Calling + Embedding + JPA/PostgreSQL 配置 + pgvector 最小存取接口 + RAG 最小闭环 + RAG 文档切分入库 + RAG 检索诊断 + RAG 自然切分策略
 ```
 
 已验证：
@@ -183,7 +183,9 @@ POST /api/ai/rag/chat
 
 POST /api/ai/rag/documents
 → 长文本 content
-→ 按 chunkSize + overlap 切分多个 chunk
+→ 优先按句子/换行自然边界切分
+→ 超长自然单元按字符兜底切分
+→ 按 chunkSize + overlap 组合多个 chunk
 → 每个 chunk 生成 embedding
 → 每个 chunk 作为独立向量记录写入 pgvector
 → 返回 chunk id / chunkIndex / chunkStart / chunkEnd

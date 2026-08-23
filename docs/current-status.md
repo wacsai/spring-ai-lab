@@ -56,6 +56,7 @@ Last Updated: 2026-08-18
 - [x] 已为向量记录增加 document/chunk 元数据，便于 references 定位具体片段
 - [x] 已为 `POST /api/ai/rag/chat` 增加检索诊断字段
 - [x] 已区分 `references` 和 `rejectedReferences`
+- [x] 已将 RAG 文档切分升级为句子/换行自然边界优先，超长单元再字符兜底
 
 ### GPU / Docker
 
@@ -84,7 +85,7 @@ Last Updated: 2026-08-18
 
 ## Current Stage
 
-**RAG 检索诊断已实现并通过真实接口验证**
+**RAG 自然切分策略已实现并通过真实接口验证**
 
 当前真实状态：
 
@@ -132,7 +133,7 @@ qwen3.5:4b
 
 当前代码已经完成最小闭环、System Prompt 模板、请求级模型参数覆盖、普通调用、流式调用、基础 Advisor 挂载、结构化输出、Tool Calling 基础接口、带参数 Tool、Embedding 最小接口、JPA/PostgreSQL 依赖接入、pgvector 初始化脚本、文档向量入库接口、精确相似度检索接口、最小 RAG 问答接口、RAG 文档切分入库接口和 RAG 检索诊断字段。
 
-当前数据库配置已启动到执行 schema 阶段；`vector(2560)` 字段可保留，但当前 pgvector HNSW 索引最多支持 2000 维，因此初始化脚本暂不创建 HNSW 索引。向量入库、检索代码、最小 RAG 接口、RAG 文档切分入库接口和 RAG 检索诊断字段已编译通过，并已通过真实请求验证。
+当前数据库配置已启动到执行 schema 阶段；`vector(2560)` 字段可保留，但当前 pgvector HNSW 索引最多支持 2000 维，因此初始化脚本暂不创建 HNSW 索引。向量入库、检索代码、最小 RAG 接口、RAG 文档切分入库接口、RAG 检索诊断字段和 RAG 自然切分策略已编译通过，并已通过真实请求验证。
 
 ## Next Task
 
@@ -140,15 +141,15 @@ qwen3.5:4b
 
 ```text
 引用格式优化
-→ 更自然的切分策略
 → 文档解析
 → 召回阈值默认值调优
+→ 更精细的 metadata / 权限过滤
 ```
 
 验收标准：
 
 - 引用信息更适合展示给用户
-- 切分策略减少英文单词或句子边界截断
+- 可以从更真实的文档来源导入资料
 - 默认 maxDistance 更贴近当前知识库数据
 
 ## Pending
@@ -157,6 +158,7 @@ qwen3.5:4b
 - [x] RAG 最小闭环
 - [x] RAG 文档切分真实接口验证
 - [x] RAG 检索诊断真实接口验证
+- [x] RAG 自然切分策略真实接口验证
 - [ ] RAG 后续增强
 - [ ] Chat Memory
 - [ ] Agent
