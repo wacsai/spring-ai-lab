@@ -24,5 +24,11 @@ public interface VectorSearchProjection {
 
     Integer getChunkEnd();
 
+    String getSourceType();
+
+    String getSourceName();
+
+    String getExternalId();
+
     Double getDistance();
 }

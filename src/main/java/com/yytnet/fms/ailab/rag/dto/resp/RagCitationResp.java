@@ -23,6 +23,12 @@ public record RagCitationResp(
         Integer chunkStart,
         // 当前 chunk 在清洗后原文中的结束字符位置。
         Integer chunkEnd,
+        // 来源类型，例如 MANUAL、MARKDOWN、PDF、URL。
+        String sourceType,
+        // 来源名称，例如文件名、网页标题、知识库名称。
+        String sourceName,
+        // 外部系统里的唯一标识，例如文件路径、对象存储 key、业务表主键或 URL。
+        String externalId,
         // pgvector cosine distance，值越小越相似。
         double distance,
         // 为了更符合人的阅读习惯，接口额外返回 similarity = 1 - distance，值越大越相似。

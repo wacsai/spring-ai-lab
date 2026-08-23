@@ -9,6 +9,9 @@ public record VectorSearchItemResp(
         Integer chunkCount,
         Integer chunkStart,
         Integer chunkEnd,
+        String sourceType,
+        String sourceName,
+        String externalId,
         double distance,
         double similarity
 ) {

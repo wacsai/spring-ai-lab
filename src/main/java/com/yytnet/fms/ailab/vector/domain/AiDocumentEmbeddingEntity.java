@@ -39,6 +39,15 @@ public class AiDocumentEmbeddingEntity {
     @Column(name = "chunk_end")
     private Integer chunkEnd;
 
+    @Column(name = "source_type")
+    private String sourceType;
+
+    @Column(name = "source_name")
+    private String sourceName;
+
+    @Column(name = "external_id")
+    private String externalId;
+
     @Column(name = "created_at")
     private OffsetDateTime createdAt;
 
@@ -75,6 +84,18 @@ public class AiDocumentEmbeddingEntity {
 
     public Integer getChunkEnd() {
         return chunkEnd;
+    }
+
+    public String getSourceType() {
+        return sourceType;
+    }
+
+    public String getSourceName() {
+        return sourceName;
+    }
+
+    public String getExternalId() {
+        return externalId;
     }
 
     public OffsetDateTime getCreatedAt() {

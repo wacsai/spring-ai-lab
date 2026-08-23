@@ -106,7 +106,7 @@ Spring AI 负责：
 
 当前真实状态：
 
-**RAG 文档重复导入处理已实现**
+**RAG 文档来源元数据已实现**
 
 当前代码已经从 Controller demo 推进到基础 AI 调用链：
 
@@ -133,7 +133,7 @@ qwen3.5:4b
 当前已完成：
 
 ```text
-代码结构 + 编译验证 + 真实接口调用验证 + System Prompt + 请求级 Model Options + Streaming + SimpleLoggerAdvisor + Structured Output + Tool Calling + Embedding + JPA/PostgreSQL 配置 + pgvector 最小存取接口 + RAG 最小闭环 + RAG 文档切分入库 + RAG 检索诊断 + RAG 自然切分策略 + RAG 引用摘要 + RAG 同名文档替换导入
+代码结构 + 编译验证 + 真实接口调用验证 + System Prompt + 请求级 Model Options + Streaming + SimpleLoggerAdvisor + Structured Output + Tool Calling + Embedding + JPA/PostgreSQL 配置 + pgvector 最小存取接口 + RAG 最小闭环 + RAG 文档切分入库 + RAG 检索诊断 + RAG 自然切分策略 + RAG 引用摘要 + RAG 同名文档替换导入 + RAG 文档来源元数据
 ```
 
 已验证：
@@ -179,10 +179,11 @@ POST /api/ai/rag/chat
 → 按 maxDistance 过滤参考资料
 → 把参考资料放入 System Prompt
 → ChatClient 基于资料生成回答
-→ 返回 answer + citations + references + rejectedReferences + 检索计数
+→ 返回 answer + citations + references + rejectedReferences + source 元数据 + 检索计数
 
 POST /api/ai/rag/documents
 → 长文本 content
+→ sourceType/sourceName/externalId 记录资料来源
 → replaceExisting=true 时先删除相同 documentTitle 的旧 chunk
 → 优先按句子/换行自然边界切分
 → 超长自然单元按字符兜底切分

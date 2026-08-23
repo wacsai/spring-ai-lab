@@ -4,6 +4,7 @@ import jakarta.validation.constraints.AssertTrue;
 import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Size;
 
 public record RagDocumentImportReq(
@@ -28,7 +29,20 @@ public record RagDocumentImportReq(
 
         // 学习阶段经常会反复导入同一篇文档。
         // true 表示先删除相同 title 对应的旧 chunk，再写入本次新切分出来的 chunk，避免检索时命中重复资料。
-        Boolean replaceExisting
+        Boolean replaceExisting,
+
+        // 资料来源类型。不传时默认 MANUAL，表示通过当前 API 手动传入文本。
+        // 后续接入 Markdown/PDF/URL 导入时，可以复用这个字段区分来源。
+        @Pattern(regexp = "MANUAL|MARKDOWN|PDF|URL|", message = "sourceType只支持MANUAL、MARKDOWN、PDF、URL")
+        String sourceType,
+
+        // 来源名称，通常是文件名、网页标题、知识库名称；不传时默认使用 title。
+        @Size(max = 200, message = "sourceName不能超过200个字符")
+        String sourceName,
+
+        // 外部系统里的唯一标识，例如文件路径、对象存储 key、业务表主键或 URL；手动输入可以不传。
+        @Size(max = 500, message = "externalId不能超过500个字符")
+        String externalId
 ) {
 
     @AssertTrue(message = "overlap必须小于chunkSize")

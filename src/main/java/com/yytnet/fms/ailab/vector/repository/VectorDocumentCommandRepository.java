@@ -39,9 +39,13 @@ public class VectorDocumentCommandRepository {
                           int chunkIndex,
                           int chunkCount,
                           int chunkStart,
-                          int chunkEnd) {
+                          int chunkEnd,
+                          String sourceType,
+                          String sourceName,
+                          String externalId) {
         // RAG 文档切分后，每个 chunk 都是一条独立向量记录。
         // document_title/chunk_index/chunk_start/chunk_end 用来让检索结果能定位回原文档中的具体片段。
+        // source_type/source_name/external_id 用来追踪资料来自手动输入、文件、网页或外部业务系统。
         Query query = entityManager.createNativeQuery("""
                 INSERT INTO ai_document_embedding (
                     title,
@@ -51,7 +55,10 @@ public class VectorDocumentCommandRepository {
                     chunk_index,
                     chunk_count,
                     chunk_start,
-                    chunk_end
+                    chunk_end,
+                    source_type,
+                    source_name,
+                    external_id
                 )
                 VALUES (
                     :title,
@@ -61,7 +68,10 @@ public class VectorDocumentCommandRepository {
                     :chunkIndex,
                     :chunkCount,
                     :chunkStart,
-                    :chunkEnd
+                    :chunkEnd,
+                    :sourceType,
+                    :sourceName,
+                    :externalId
                 )
                 RETURNING id
                 """);
@@ -73,6 +83,9 @@ public class VectorDocumentCommandRepository {
         query.setParameter("chunkCount", chunkCount);
         query.setParameter("chunkStart", chunkStart);
         query.setParameter("chunkEnd", chunkEnd);
+        query.setParameter("sourceType", sourceType);
+        query.setParameter("sourceName", sourceName);
+        query.setParameter("externalId", externalId);
 
         Number id = (Number) query.getSingleResult();
         return id.longValue();

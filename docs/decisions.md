@@ -551,3 +551,51 @@ deletedCount
 - 删除范围只限定在 `document_title = title` 的 RAG chunk。
 - 早期 `/api/ai/vector/documents` 写入的普通向量 demo 记录没有 `document_title`，不会被该功能删除。
 - 当前实现是学习阶段的最小替换能力；后续真实业务应增加 documentId、sourceId、版本号、权限边界和导入事务策略。
+
+---
+
+## ADR-017: RAG chunk 增加文档来源元数据
+
+Status: Accepted
+
+### Decision
+
+`ai_document_embedding` 增加来源元数据列：
+
+```text
+source_type
+source_name
+external_id
+```
+
+`POST /api/ai/rag/documents` 请求新增：
+
+```text
+sourceType
+sourceName
+externalId
+```
+
+默认值：
+
+```text
+sourceType = MANUAL
+sourceName = title
+externalId = null
+```
+
+`POST /api/ai/rag/chat` 的 `references` 和 `citations` 都返回这些来源字段。
+
+### Reason
+
+- 真实 RAG 需要追踪 chunk 来自哪里，而不只是知道来自哪个 documentTitle。
+- `sourceType` 用于区分手动 API 导入、Markdown、PDF、URL 等不同来源。
+- `sourceName` 用于展示来源名称，例如文件名、网页标题或知识库名称。
+- `externalId` 用于绑定外部系统里的唯一标识，例如文件路径、对象存储 key、业务表主键或 URL。
+- 当前阶段先只保存和返回元数据，不提前实现 PDF/Markdown/URL 解析。
+
+### Impact
+
+- 旧数据的来源字段允许为 null，不影响现有检索。
+- 新导入的 RAG chunk 默认会带 `MANUAL` 来源信息。
+- 后续实现文档解析、去重、删除、版本管理、权限过滤时，可以基于这些来源字段继续扩展。

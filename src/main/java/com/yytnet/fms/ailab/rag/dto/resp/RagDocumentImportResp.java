@@ -9,6 +9,9 @@ public record RagDocumentImportResp(
         int overlap,
         boolean replaceExisting,
         int deletedCount,
+        String sourceType,
+        String sourceName,
+        String externalId,
         int chunkCount,
         List<RagDocumentChunkResp> chunks,
         String note

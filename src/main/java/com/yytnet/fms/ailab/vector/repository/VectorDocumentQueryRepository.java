@@ -26,6 +26,9 @@ public interface VectorDocumentQueryRepository extends Repository<AiDocumentEmbe
                 chunk_count AS chunkCount,
                 chunk_start AS chunkStart,
                 chunk_end AS chunkEnd,
+                source_type AS sourceType,
+                source_name AS sourceName,
+                external_id AS externalId,
                 embedding <=> CAST(:queryEmbedding AS vector) AS distance
             FROM ai_document_embedding
             ORDER BY embedding <=> CAST(:queryEmbedding AS vector)

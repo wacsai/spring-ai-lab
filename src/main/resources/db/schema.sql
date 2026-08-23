@@ -13,7 +13,10 @@ ALTER TABLE ai_document_embedding
     ADD COLUMN IF NOT EXISTS chunk_index INTEGER,
     ADD COLUMN IF NOT EXISTS chunk_count INTEGER,
     ADD COLUMN IF NOT EXISTS chunk_start INTEGER,
-    ADD COLUMN IF NOT EXISTS chunk_end INTEGER;
+    ADD COLUMN IF NOT EXISTS chunk_end INTEGER,
+    ADD COLUMN IF NOT EXISTS source_type VARCHAR(40),
+    ADD COLUMN IF NOT EXISTS source_name VARCHAR(200),
+    ADD COLUMN IF NOT EXISTS external_id VARCHAR(500);
 
 -- qwen3-embedding:4b 返回 2560 维向量。
 -- 当前 pgvector 的 hnsw 索引限制是最多 2000 维，因此这里先不创建 hnsw 索引。

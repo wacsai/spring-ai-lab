@@ -103,7 +103,10 @@ public class VectorDocumentService {
                             int chunkIndex,
                             int chunkCount,
                             int chunkStart,
-                            int chunkEnd) {
+                            int chunkEnd,
+                            String sourceType,
+                            String sourceName,
+                            String externalId) {
         try {
             // 一个长文档会被拆成多个 chunk；每个 chunk 都单独生成 embedding 并作为一条记录写入 pgvector。
             float[] embedding = embedAndValidate(content);
@@ -115,7 +118,10 @@ public class VectorDocumentService {
                     chunkIndex,
                     chunkCount,
                     chunkStart,
-                    chunkEnd
+                    chunkEnd,
+                    sourceType,
+                    sourceName,
+                    externalId
             );
         } catch (RuntimeException ex) {
             throw new AiVectorStoreException("文档片段向量入库失败", ex);
@@ -148,6 +154,9 @@ public class VectorDocumentService {
                         row.getChunkCount(),
                         row.getChunkStart(),
                         row.getChunkEnd(),
+                        row.getSourceType(),
+                        row.getSourceName(),
+                        row.getExternalId(),
                         row.getDistance(),
                         toSimilarity(row.getDistance())
                 ))

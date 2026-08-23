@@ -24,6 +24,7 @@ public class RagService {
 
     private static final int DEFAULT_TOP_K = 3;
     private static final double DEFAULT_MAX_DISTANCE = 0.6;
+    private static final String DEFAULT_SOURCE_TYPE = "MANUAL";
 
     // RAG 阶段继续挂 SimpleLoggerAdvisor，方便从日志里观察最终发给模型的 context 和 question。
     private static final SimpleLoggerAdvisor SIMPLE_LOGGER_ADVISOR = SimpleLoggerAdvisor.builder()
@@ -66,6 +67,9 @@ public class RagService {
             int chunkSize = req.chunkSize() == null ? RagDocumentChunker.DEFAULT_CHUNK_SIZE : req.chunkSize();
             int overlap = req.overlap() == null ? RagDocumentChunker.DEFAULT_OVERLAP : req.overlap();
             boolean replaceExisting = Boolean.TRUE.equals(req.replaceExisting());
+            String sourceType = resolveSourceType(req.sourceType());
+            String sourceName = resolveSourceName(req.sourceName(), documentTitle);
+            String externalId = normalizeOptional(req.externalId());
 
             // 文档导入阶段只做 RAG 的“知识入库”：
             // 1. 把一篇长文档切成多个 chunk。
@@ -80,7 +84,7 @@ public class RagService {
             // 这里逐个 chunk 入库，而不是整篇文档只存一条向量。
             // 这样用户提问时，pgvector 可以命中更精确的片段，而不是返回整篇文档的“平均语义”。
             List<RagDocumentChunkResp> importedChunks = chunks.stream()
-                    .map(chunk -> importChunk(documentTitle, chunk, chunkCount))
+                    .map(chunk -> importChunk(documentTitle, sourceType, sourceName, externalId, chunk, chunkCount))
                     .toList();
 
             return new RagDocumentImportResp(
@@ -90,6 +94,9 @@ public class RagService {
                     overlap,
                     replaceExisting,
                     deletedCount,
+                    sourceType,
+                    sourceName,
+                    externalId,
                     chunkCount,
                     importedChunks,
                     buildImportNote(replaceExisting, deletedCount)
@@ -175,12 +182,18 @@ public class RagService {
                 item.chunkCount(),
                 item.chunkStart(),
                 item.chunkEnd(),
+                item.sourceType(),
+                item.sourceName(),
+                item.externalId(),
                 item.distance(),
                 item.similarity()
         );
     }
 
     private RagDocumentChunkResp importChunk(String documentTitle,
+                                             String sourceType,
+                                             String sourceName,
+                                             String externalId,
                                              RagDocumentChunker.Chunk chunk,
                                              int chunkCount) {
         String chunkTitle = buildChunkTitle(documentTitle, chunk.chunkIndex(), chunkCount);
@@ -193,7 +206,10 @@ public class RagService {
                 chunk.chunkIndex(),
                 chunkCount,
                 chunk.start(),
-                chunk.end()
+                chunk.end(),
+                sourceType,
+                sourceName,
+                externalId
         );
 
         return new RagDocumentChunkResp(
@@ -223,6 +239,29 @@ public class RagService {
         return "已先删除相同文档标题的旧 chunk %d 条，再写入本次新切分的 chunk。".formatted(deletedCount);
     }
 
+    private String resolveSourceType(String sourceType) {
+        String normalizedSourceType = normalizeOptional(sourceType);
+        if (normalizedSourceType == null) {
+            return DEFAULT_SOURCE_TYPE;
+        }
+        return normalizedSourceType;
+    }
+
+    private String resolveSourceName(String sourceName, String documentTitle) {
+        String normalizedSourceName = normalizeOptional(sourceName);
+        if (normalizedSourceName == null) {
+            return documentTitle;
+        }
+        return normalizedSourceName;
+    }
+
+    private String normalizeOptional(String value) {
+        if (value == null || value.isBlank()) {
+            return null;
+        }
+        return value.strip();
+    }
+
     private String buildChunkTitle(String documentTitle, int chunkIndex, int chunkCount) {
         return "%s - chunk %d/%d".formatted(documentTitle, chunkIndex, chunkCount);
     }
@@ -242,6 +281,9 @@ public class RagService {
                     reference.chunkCount(),
                     reference.chunkStart(),
                     reference.chunkEnd(),
+                    reference.sourceType(),
+                    reference.sourceName(),
+                    reference.externalId(),
                     reference.distance(),
                     reference.similarity()
             ));
@@ -260,6 +302,7 @@ public class RagService {
             context.append(buildReferenceLabel(i)).append("：\n")
                     .append("id: ").append(reference.id()).append("\n")
                     .append("title: ").append(reference.title()).append("\n");
+            appendSourceMetadata(context, reference);
             appendChunkMetadata(context, reference);
             context.append("distance: ").append(reference.distance()).append("\n")
                     .append("content: ").append(reference.content()).append("\n\n");
@@ -281,5 +324,22 @@ public class RagService {
                 .append(reference.chunkCount()).append("\n")
                 .append("range: ").append(reference.chunkStart()).append("-")
                 .append(reference.chunkEnd()).append("\n");
+    }
+
+    private void appendSourceMetadata(StringBuilder context, RagReferenceResp reference) {
+        if (reference.sourceType() == null && reference.sourceName() == null && reference.externalId() == null) {
+            return;
+        }
+
+        appendIfPresent(context, "sourceType", reference.sourceType());
+        appendIfPresent(context, "sourceName", reference.sourceName());
+        appendIfPresent(context, "externalId", reference.externalId());
+    }
+
+    private void appendIfPresent(StringBuilder context, String name, String value) {
+        if (value == null) {
+            return;
+        }
+        context.append(name).append(": ").append(value).append("\n");
     }
 }

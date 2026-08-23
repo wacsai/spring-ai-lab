@@ -9,6 +9,9 @@ public record RagReferenceResp(
         Integer chunkCount,
         Integer chunkStart,
         Integer chunkEnd,
+        String sourceType,
+        String sourceName,
+        String externalId,
         double distance,
         double similarity
 ) {
