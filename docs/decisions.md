@@ -1204,3 +1204,44 @@ Java Safety Boundary
 - 保留现有 `/api/ai/agent/study`、`/api/ai/agent/study/steps`、`/api/ai/agent/study/loop` 用于回顾 Agent 基础概念。
 - 当前 Agent 行为只作为学习演示，不作为生产级 Agent 框架。
 - 后续进入 MCP 时，优先理解 MCP 与 Tool Calling、Agent action 的关系，再决定是否实现最小 MCP demo。
+
+---
+
+## ADR-033: MCP 阶段使用独立 Server + 主项目 Client 最小闭环
+
+Status: Accepted
+
+### Decision
+
+MCP 阶段拆成两个 Spring Boot 进程：
+
+```text
+spring-ai-mcp-server-demo:8081
+→ 独立 MCP Server
+→ 暴露 McpLearningTool#getSpringAiMcpLearningProgress
+
+spring-ai-lab:8080
+→ MCP Client
+→ 通过 Streamable HTTP 连接 http://localhost:8081/mcp
+→ 把远程 MCP tool callback 注册给 ChatClient
+```
+
+主项目新增接口：
+
+```text
+POST /api/ai/mcp/chat
+```
+
+### Reason
+
+- MCP 的核心价值是标准化跨进程、跨服务的工具/资源接入；如果只在同一个项目里调用本地 `@Tool`，和前面的 Tool Calling 区别不明显。
+- 当前学习阶段只需要验证远程 tool 最小闭环，不需要数据库、Resource、Prompt、Sampling、Elicitation 或复杂权限系统。
+- `spring-ai-mcp-server-demo` 可以保持干净，只作为 MCP Server 学习项目；`spring-ai-lab` 保持主线学习应用，只消费远程 MCP 能力。
+- Spring AI 2.0 推荐使用 Streamable HTTP / Stateless Streamable HTTP，SSE 已不作为当前新 demo 的优先方案。
+
+### Impact
+
+- 真实验证时需要先启动 `spring-ai-mcp-server-demo`，再启动 `spring-ai-lab`。
+- `spring-ai-lab` 的 MCP Server 地址通过配置管理，默认 `SPRING_AI_MCP_SERVER_URL=http://localhost:8081`。
+- 如果 MCP Server 未启动，`POST /api/ai/mcp/chat` 会返回 MCP 调用失败；这是当前阶段可接受的学习边界。
+- 后续可以在 MCP Server 中继续增加 Resource / Prompt 或真实业务工具，但当前不提前扩展。

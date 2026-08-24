@@ -106,7 +106,7 @@ Spring AI 负责：
 
 当前真实状态：
 
-**Agent 基础阶段已完成**
+**MCP Server + MCP Client 最小接入已完成**
 
 当前代码已经从 Controller demo 推进到基础 AI 调用链：
 
@@ -133,7 +133,7 @@ qwen3.5:4b
 当前已完成：
 
 ```text
-代码结构 + 编译验证 + 真实接口调用验证 + System Prompt + 请求级 Model Options + Streaming + SimpleLoggerAdvisor + Structured Output + Tool Calling + Embedding + JPA/PostgreSQL 配置 + pgvector 最小存取接口 + RAG 最小闭环 + RAG 文档切分入库 + RAG 检索诊断 + RAG 自然切分策略 + RAG 引用摘要 + RAG 同名文档替换导入 + RAG 文档来源元数据 + TXT/Markdown 文件导入 + Markdown 标题感知切分 + RAG 来源过滤检索 + Markdown 低价值 chunk 合并 + RAG 稳定来源身份替换 + Chat Memory JVM 内存版最小闭环 + Chat Memory 会话清理接口 + Agent 学习助手最小闭环 + Agent 显式 State + Step 记录 + Agent 动态 Loop + Stop Condition + Agent Loop RAG_SEARCH 检索动作 + Agent Loop ASK_USER 澄清动作 + Agent Loop 重复 action 保护 + Agent Loop RAG_SEARCH query 保守归一化 + Agent 基础阶段收口
+代码结构 + 编译验证 + 真实接口调用验证 + System Prompt + 请求级 Model Options + Streaming + SimpleLoggerAdvisor + Structured Output + Tool Calling + Embedding + JPA/PostgreSQL 配置 + pgvector 最小存取接口 + RAG 最小闭环 + RAG 文档切分入库 + RAG 检索诊断 + RAG 自然切分策略 + RAG 引用摘要 + RAG 同名文档替换导入 + RAG 文档来源元数据 + TXT/Markdown 文件导入 + Markdown 标题感知切分 + RAG 来源过滤检索 + Markdown 低价值 chunk 合并 + RAG 稳定来源身份替换 + Chat Memory JVM 内存版最小闭环 + Chat Memory 会话清理接口 + Agent 学习助手最小闭环 + Agent 显式 State + Step 记录 + Agent 动态 Loop + Stop Condition + Agent Loop RAG_SEARCH 检索动作 + Agent Loop ASK_USER 澄清动作 + Agent Loop 重复 action 保护 + Agent Loop RAG_SEARCH query 保守归一化 + Agent 基础阶段收口 + 独立 MCP Server 最小工具 + 主项目 MCP Client 最小接入
 ```
 
 已验证：
@@ -240,6 +240,18 @@ POST /api/ai/agent/study/loop
 → action=FINISH 时停止循环并返回 answer
 → 达到 maxSteps 仍未 FINISH 时按 MAX_STEPS_REACHED 停止
 → 只把用户 goal 和最终 answer 写回 Memory，内部决策步骤不写入 Memory
+
+POST /api/ai/mcp/chat
+→ McpClientController
+→ McpClientChatService
+→ Spring AI MCP Client 连接 spring-ai-mcp-server-demo
+→ 通过 Streamable HTTP 访问 http://localhost:8081/mcp
+→ 自动发现远程 MCP tool callback
+→ ChatClient 注册远程 ToolCallbackProvider
+→ 模型按需调用远程 MCP 工具
+→ MCP Server 执行独立进程里的 Java @Tool 方法
+→ 工具结果回到 ChatClient
+→ 模型基于工具结果生成最终回答
 ```
 
 Agent 阶段收口说明：
@@ -250,7 +262,7 @@ Goal / State / Action / Observation / Loop / Stop Condition / Memory / Java Safe
 
 当前不继续深挖 Prompt 微调、RAG query rewrite、rerank、复杂工具编排、权限审批、状态持久化或多 Agent 协作。
 模型 action 选择存在不稳定性，后续进入 Observability / Evaluation 阶段再系统评估。
-下一阶段进入 MCP 基础学习。
+下一阶段进行 MCP 真实接口验证。
 ```
 
 当前接口支持：
@@ -281,6 +293,14 @@ POST /api/ai/tool/chat
 ```text
 POST /api/ai/agent/study
 POST /api/ai/agent/study/steps
+POST /api/ai/agent/study/loop
+```
+
+当前 MCP Client 接口：
+
+```text
+POST /api/ai/mcp/chat
+连接目标：spring-ai-mcp-server-demo，默认 http://localhost:8081/mcp
 ```
 
 当前 Embedding 接口：

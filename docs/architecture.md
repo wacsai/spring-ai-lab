@@ -24,9 +24,9 @@ Spring Boot Application
               ├── Agent
               └── MCP
                     │
-          ┌─────────┼──────────┐
-          ▼         ▼          ▼
-       Ollama    PostgreSQL   External Tools
+          ┌─────────┼──────────┬──────────────────────────────┐
+          ▼         ▼          ▼                              ▼
+       Ollama    PostgreSQL   Local Tools              MCP Server Demo
           │       + pgvector
           ▼
      qwen3.5:4b
@@ -96,3 +96,25 @@ FFmpeg
 - Tool Calling 负责连接真实业务能力
 - MCP 用于标准化外部工具/资源接入
 - Agent 建立在 Tool + State + Loop + Model 之上
+
+## 4. MCP 当前最小架构
+
+```text
+Client
+↓
+spring-ai-lab:8080
+↓
+McpClientController
+↓
+McpClientChatService
+↓
+ChatClient
+↓
+Spring AI MCP Client
+↓ HTTP + MCP /mcp
+spring-ai-mcp-server-demo:8081
+↓
+McpLearningTool#getSpringAiMcpLearningProgress
+```
+
+当前 MCP 阶段只验证远程工具调用闭环，不接数据库、不提前实现 Resource / Prompt / Sampling / Elicitation。

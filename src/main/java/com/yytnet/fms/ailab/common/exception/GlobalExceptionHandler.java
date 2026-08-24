@@ -111,4 +111,13 @@ public class GlobalExceptionHandler {
         return ResponseEntity.status(HttpStatus.BAD_GATEWAY)
                 .body(new ErrorResp(HttpStatus.BAD_GATEWAY.value(), ex.getMessage(), List.of()));
     }
+
+    /**
+     * 处理 MCP Client 连接、工具发现或远程工具调用失败异常
+     */
+    @ExceptionHandler(AiMcpException.class)
+    public ResponseEntity<ErrorResp> handleAiMcpException(AiMcpException ex) {
+        return ResponseEntity.status(HttpStatus.BAD_GATEWAY)
+                .body(new ErrorResp(HttpStatus.BAD_GATEWAY.value(), ex.getMessage(), List.of()));
+    }
 }

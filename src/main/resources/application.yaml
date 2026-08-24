@@ -28,6 +28,19 @@ spring:
         model: qwen3.5:4b
       embedding:
         model: qwen3-embedding:4b
+    mcp:
+      client:
+        name: spring-ai-lab-mcp-client
+        version: 1.0.0
+        type: SYNC
+        request-timeout: 20s
+        toolcallback:
+          enabled: true
+        streamable-http:
+          connections:
+            learning-mcp-server:
+              url: ${SPRING_AI_MCP_SERVER_URL:http://localhost:8081}
+              endpoint: /mcp
 
 logging:
   level:
