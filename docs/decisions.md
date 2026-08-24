@@ -1099,3 +1099,38 @@ answer=需要用户补充的问题
 - `/api/ai/agent/study/loop` 的 `completed=false` 不一定表示错误，也可能表示正在等待用户输入。
 - 前端或调用方可以根据 `stopReason=WAITING_USER_INPUT` 展示澄清问题。
 - 后续如果增加审批、权限确认、人工介入，也可以沿用类似 stopReason 模式。
+
+---
+
+## ADR-030: Agent Loop 增加重复 Action 保护
+
+Status: Accepted
+
+### Decision
+
+在 `POST /api/ai/agent/study/loop` 中增加服务层保护：
+
+```text
+如果 RAG_SEARCH 已经执行过，模型再次选择 RAG_SEARCH，服务层不再重复检索。
+如果 LearningProgressTool 已经执行过，模型再次选择 GET_LEARNING_PROGRESS，服务层不再重复调用工具。
+```
+
+服务层会改为基于已有 `steps` 生成最终回答，并返回：
+
+```text
+completed=true
+stopReason=FINISH
+```
+
+### Reason
+
+- Prompt 可以指导模型，但不能保证模型每次都严格遵守。
+- 实测中模型可能连续多轮选择 `RAG_SEARCH`，导致达到 `MAX_STEPS_REACHED` 却没有最终回答。
+- 重复检索会浪费调用次数，也会让 Agent 行为看起来不稳定。
+- Agent Loop 的停止控制必须由 Java 服务层兜底，而不能完全交给模型。
+
+### Impact
+
+- Agent 仍然保留模型动态决策，但 Java 会阻止明显重复的 action。
+- 当重复 action 被阻止时，服务层会追加一个 `FINISH` step，说明已基于现有 observation 生成最终回答。
+- 后续更多 action 接入时，也应评估是否需要类似的去重、幂等或最大调用次数限制。

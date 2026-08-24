@@ -82,6 +82,7 @@ Last Updated: 2026-08-24
 - [x] 已在 `RagService` 暴露只检索不生成回答的 `retrieveReferences(...)`，供 Agent 将 RAG 结果作为 observation
 - [x] 已为 Agent Loop 增加 `ASK_USER` action
 - [x] 已支持信息不足时返回 `stopReason=WAITING_USER_INPUT` 并等待用户补充
+- [x] 已为 Agent Loop 增加重复 action 保护，避免模型反复选择 `RAG_SEARCH` / `GET_LEARNING_PROGRESS` 导致 `MAX_STEPS_REACHED`
 
 ### GPU / Docker
 
@@ -273,6 +274,8 @@ action=RAG_SEARCH 时，Java 服务层调用 RagService.retrieveReferences 只�
 ↓
 action=ASK_USER 时，停止循环并返回 WAITING_USER_INPUT
 ↓
+如果模型重复选择已经执行过的 RAG_SEARCH / GET_LEARNING_PROGRESS，Java 服务层阻止重复 action 并基于现有 steps 生成最终回答
+↓
 工具返回结果作为 observation 写入 steps
 ↓
 下一轮把 goal + memoryContext + steps 再交给模型判断
@@ -284,7 +287,7 @@ action=FINISH 时停止循环并返回 answer
 只把用户 goal 和最终 answer 写回 ChatMemory，内部决策步骤不写入 Memory
 ```
 
-当前代码已经完成最小闭环、System Prompt 模板、请求级模型参数覆盖、普通调用、流式调用、基础 Advisor 挂载、结构化输出、Tool Calling 基础接口、带参数 Tool、Embedding 最小接口、JPA/PostgreSQL 依赖接入、pgvector 初始化脚本、文档向量入库接口、精确相似度检索接口、最小 RAG 问答接口、RAG 文档切分入库接口、RAG 检索诊断字段、RAG 引用摘要、同名文档替换导入、来源元数据、TXT/Markdown 文件上传导入、Markdown 标题感知切分、RAG 来源过滤检索、Markdown 低价值 chunk 合并、RAG 稳定来源身份替换、Chat Memory JVM 内存版最小闭环、Chat Memory 会话清理接口、Agent 学习助手最小闭环、Agent 显式 State + Step 记录、Agent 动态 Loop + Stop Condition、Agent Loop RAG_SEARCH 检索动作和 Agent Loop ASK_USER 澄清动作。
+当前代码已经完成最小闭环、System Prompt 模板、请求级模型参数覆盖、普通调用、流式调用、基础 Advisor 挂载、结构化输出、Tool Calling 基础接口、带参数 Tool、Embedding 最小接口、JPA/PostgreSQL 依赖接入、pgvector 初始化脚本、文档向量入库接口、精确相似度检索接口、最小 RAG 问答接口、RAG 文档切分入库接口、RAG 检索诊断字段、RAG 引用摘要、同名文档替换导入、来源元数据、TXT/Markdown 文件上传导入、Markdown 标题感知切分、RAG 来源过滤检索、Markdown 低价值 chunk 合并、RAG 稳定来源身份替换、Chat Memory JVM 内存版最小闭环、Chat Memory 会话清理接口、Agent 学习助手最小闭环、Agent 显式 State + Step 记录、Agent 动态 Loop + Stop Condition、Agent Loop RAG_SEARCH 检索动作、Agent Loop ASK_USER 澄清动作和 Agent Loop 重复 action 保护。
 
 当前数据库配置已启动到执行 schema 阶段；`vector(2560)` 字段可保留，但当前 pgvector HNSW 索引最多支持 2000 维，因此初始化脚本暂不创建 HNSW 索引。向量入库、检索代码、最小 RAG 接口、RAG 文档切分入库接口、RAG 检索诊断字段和 RAG 自然切分策略已编译通过，并已通过真实请求验证。RAG 引用摘要、同名文档替换导入、来源元数据、TXT/Markdown 文件上传导入、Markdown 标题感知切分、RAG 来源过滤检索、Markdown 低价值 chunk 合并和 RAG 稳定来源身份替换已完成代码实现。Chat Memory JVM 内存版和会话清理接口已完成代码实现。Agent 学习助手最小闭环、显式 State + Step 记录、动态 Loop + Stop Condition、RAG_SEARCH action 和 ASK_USER action 已完成代码实现，待真实接口调用验证。
 
@@ -305,6 +308,7 @@ action=FINISH 时停止循环并返回 answer
 - `/api/ai/agent/study/loop` 能返回动态 steps、stopReason 和最终 answer
 - `/api/ai/agent/study/loop` 在知识类问题中能触发 `RAG_SEARCH`
 - `/api/ai/agent/study/loop` 在信息不足时能触发 `ASK_USER` 并返回 `WAITING_USER_INPUT`
+- `/api/ai/agent/study/loop` 不应连续重复执行同一个检索类 action
 - 同一个 conversationId 下 Agent 能保留学习对话上下文
 - 明确 `/study/steps` 是固定两步，`/study/loop` 是受限 action 集合下的动态循环
 
@@ -330,6 +334,7 @@ action=FINISH 时停止循环并返回 answer
 - [x] Agent 动态 Loop + Stop Condition
 - [x] Agent Loop RAG_SEARCH 检索动作
 - [x] Agent Loop ASK_USER 澄清动作
+- [x] Agent Loop 重复 action 保护
 - [ ] MCP
 - [ ] Observability
 - [ ] Evaluation

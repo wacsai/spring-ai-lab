@@ -95,7 +95,12 @@ public class StudyAgentService {
             - FINISH：已经具备足够信息，可以输出最终回答
 
             决策规则：
-            - 如果用户只说“继续”“下一步”“帮我规划”等，但没有说明想学哪个方向，并且当前 memoryContext 也无法判断偏好，选择 ASK_USER，并在 answer 中提出一个简短澄清问题
+            - 只有在用户目标和 memoryContext 都完全无法判断学习方向时，才允许选择 ASK_USER，并在 answer 中提出一个简短澄清问题
+            - RAG、Agent、Memory、Tool Calling、Structured Output、Embedding、MCP 这些能力名本身就是明确学习方向；只要 goal 或 memoryContext 出现这些能力名，就禁止选择 ASK_USER
+            - 如果用户只说“继续”“下一步”“帮我规划”等，但 memoryContext 中已经有明确学习方向，必须结合该方向继续决策，禁止选择 ASK_USER
+            - 如果明确学习方向是 RAG，并且 steps 里还没有 RAG_SEARCH 的 observation，优先选择 RAG_SEARCH
+            - 如果 steps 里已经有 RAG_SEARCH 的 observation，禁止再次选择 RAG_SEARCH，应选择 FINISH
+            - 如果 steps 里已经有 LearningProgressTool 的 observation，禁止再次选择 GET_LEARNING_PROGRESS，应选择 FINISH 或补齐其他缺少的 observation
             - 如果用户询问当前阶段、学习进度、下一步，并且 steps 里还没有 LearningProgressTool 的 observation，选择 GET_LEARNING_PROGRESS
             - 如果用户询问 Spring AI 概念、RAG、Memory、Tool Calling、Agent 等项目知识，并且 steps 里还没有 RAG_SEARCH 的 observation，选择 RAG_SEARCH，并在 query 中放入适合检索的问题
             - 如果用户问题同时需要学习进度和知识库资料，就先补齐缺少的 observation，再选择 FINISH
@@ -103,6 +108,27 @@ public class StudyAgentService {
             - 当前 Agent 只做 Spring AI 学习规划和解释，不执行文件修改、数据库写入、系统命令或外部请求
             - 如果用户要求执行当前边界外的任务，例如直接修改代码、操作数据库、调用系统命令或实现 MCP 服务，选择 ASK_USER 或 FINISH 说明当前边界，不要编造已执行结果
             - answer 要先给结论，再给必要解释
+
+            当前 goal:
+            {goal}
+
+            当前 conversationId 的历史对话:
+            {memoryContext}
+
+            当前 Agent steps:
+            {steps}
+            """;
+
+    private static final String LOOP_FINAL_ANSWER_PROMPT = """
+            你是 spring-ai-lab 项目的学习助手 Agent。
+
+            当前服务层已经阻止了重复 action，请基于已有 Agent State 生成最终回答。
+
+            回答要求：
+            - 使用中文回答
+            - 先给结论，再给必要解释
+            - 只基于 goal、memoryContext 和 steps 中已有 observation 回答
+            - 不要声称又执行了新的工具或检索
 
             当前 goal:
             {goal}
@@ -239,6 +265,18 @@ public class StudyAgentService {
                 StudyAgentDecision decision = decideNextAction(goal, memoryContext, steps);
                 String action = normalizeAction(decision.action());
 
+                if (isRepeatedAction(action, steps)) {
+                    answer = generateFinalAnswerFromSteps(goal, memoryContext, steps);
+                    steps.add(new StudyAgentStepResp(
+                            stepNo,
+                            "FINISH: 已有 observation，阻止重复 action=" + action + " 并生成最终回答",
+                            summarizeAnswer(answer)
+                    ));
+                    completed = true;
+                    stopReason = ACTION_FINISH;
+                    break;
+                }
+
                 if (ACTION_GET_LEARNING_PROGRESS.equals(action)) {
                     // 动态 Loop 的关键点：模型只决定“要查学习进度”，真正执行 Java 方法的是服务层。
                     LearningProgressResp progress = learningProgressTool.getSpringAiLearningProgress();
@@ -351,6 +389,24 @@ public class StudyAgentService {
                 .entity(StudyAgentDecision.class, ChatClient.EntityParamSpec::validateSchema);
     }
 
+    private String generateFinalAnswerFromSteps(String goal, String memoryContext, List<StudyAgentStepResp> steps) {
+        String content = chatClient.prompt()
+                .system(system -> system
+                        .text(LOOP_FINAL_ANSWER_PROMPT)
+                        .param("goal", goal)
+                        .param("memoryContext", memoryContext)
+                        .param("steps", formatSteps(steps)))
+                .user("请基于现有 Agent State 生成最终回答。")
+                .advisors(SIMPLE_LOGGER_ADVISOR)
+                .options(OllamaChatOptions.builder()
+                        .model(model)
+                        .disableThinking()
+                        .temperature(0.2))
+                .call()
+                .content();
+        return content == null ? "" : content;
+    }
+
     private String formatMemoryContext(List<Message> messages) {
         if (messages.isEmpty()) {
             return "无历史对话。";
@@ -384,6 +440,17 @@ public class StudyAgentService {
             return "";
         }
         return action.strip().toUpperCase();
+    }
+
+    private boolean isRepeatedAction(String action, List<StudyAgentStepResp> steps) {
+        return (ACTION_RAG_SEARCH.equals(action) && hasStepAction(steps, "RAG_SEARCH"))
+                || (ACTION_GET_LEARNING_PROGRESS.equals(action) && hasStepAction(steps, "LearningProgressTool"));
+    }
+
+    private boolean hasStepAction(List<StudyAgentStepResp> steps, String actionKeyword) {
+        return steps.stream()
+                .map(StudyAgentStepResp::action)
+                .anyMatch(action -> action.contains(actionKeyword));
     }
 
     private String normalizeFinalAnswer(String answer, String reason) {
