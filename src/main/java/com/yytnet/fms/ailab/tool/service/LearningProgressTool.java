@@ -20,7 +20,7 @@ public class LearningProgressTool {
     public LearningProgressResp getSpringAiLearningProgress() {
         // 这个工具是只读的：不查数据库、不写文件、不调用外部系统，方便先验证 Tool Calling 的核心链路。
         return new LearningProgressResp(
-                "Chat Memory 会话清理接口已完成，准备进入 Agent 最小闭环",
+                "Agent 学习助手最小闭环已完成，正在进入显式 State + Step 记录",
                 List.of(
                         "ChatClient 普通调用",
                         "System Prompt",
@@ -35,9 +35,10 @@ public class LearningProgressTool {
                         "RAG 最小闭环",
                         "RAG 文档切分、文件导入、来源过滤和引用摘要",
                         "Chat Memory JVM 内存版多轮会话",
-                        "Chat Memory 会话清理接口"
+                        "Chat Memory 会话清理接口",
+                        "Agent 学习助手最小闭环"
                 ),
-                "Agent",
+                "Agent State + Step 记录",
                 "当前工具返回的是项目内固定学习状态，用于验证模型能按需调用 Java 本地方法，并为 Agent 提供状态依据。",
                 "LearningProgressTool#getSpringAiLearningProgress"
         );

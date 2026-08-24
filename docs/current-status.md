@@ -74,6 +74,8 @@ Last Updated: 2026-08-24
 - [x] 已提供 `POST /api/ai/agent/study`
 - [x] 已实现学习助手 Agent 最小闭环：ChatClient + LearningProgressTool + Chat Memory + 固定目标边界
 - [x] 已更新 `LearningProgressTool` 的固定学习进度到当前阶段
+- [x] 已提供 `POST /api/ai/agent/study/steps`
+- [x] 已实现显式 Agent State + Step 记录：goal、steps、observation、completed、answer
 
 ### GPU / Docker
 
@@ -102,7 +104,7 @@ Last Updated: 2026-08-24
 
 ## Current Stage
 
-**Agent 学习助手最小闭环已实现**
+**Agent 显式 State + Step 记录已实现**
 
 当前真实状态：
 
@@ -222,9 +224,31 @@ qwen3.5:4b
 基于工具结果 + 会话上下文回答学习下一步
 ```
 
-当前代码已经完成最小闭环、System Prompt 模板、请求级模型参数覆盖、普通调用、流式调用、基础 Advisor 挂载、结构化输出、Tool Calling 基础接口、带参数 Tool、Embedding 最小接口、JPA/PostgreSQL 依赖接入、pgvector 初始化脚本、文档向量入库接口、精确相似度检索接口、最小 RAG 问答接口、RAG 文档切分入库接口、RAG 检索诊断字段、RAG 引用摘要、同名文档替换导入、来源元数据、TXT/Markdown 文件上传导入、Markdown 标题感知切分、RAG 来源过滤检索、Markdown 低价值 chunk 合并、RAG 稳定来源身份替换、Chat Memory JVM 内存版最小闭环、Chat Memory 会话清理接口和 Agent 学习助手最小闭环。
+Agent State + Step 链路：
 
-当前数据库配置已启动到执行 schema 阶段；`vector(2560)` 字段可保留，但当前 pgvector HNSW 索引最多支持 2000 维，因此初始化脚本暂不创建 HNSW 索引。向量入库、检索代码、最小 RAG 接口、RAG 文档切分入库接口、RAG 检索诊断字段和 RAG 自然切分策略已编译通过，并已通过真实请求验证。RAG 引用摘要、同名文档替换导入、来源元数据、TXT/Markdown 文件上传导入、Markdown 标题感知切分、RAG 来源过滤检索、Markdown 低价值 chunk 合并和 RAG 稳定来源身份替换已完成代码实现。Chat Memory JVM 内存版和会话清理接口已完成代码实现。Agent 学习助手最小闭环已完成代码实现，待真实接口调用验证。
+```text
+Client
+↓
+POST /api/ai/agent/study/steps
+↓
+StudyAgentController
+↓
+StudyAgentService.chatWithSteps()
+↓
+Step 1: LearningProgressTool#getSpringAiLearningProgress
+↓
+Observation 写入 steps[0]
+↓
+Step 2: ChatClient 基于 goal + toolObservation 生成 answer
+↓
+Observation 写入 steps[1]
+↓
+返回 goal + completed + steps + answer
+```
+
+当前代码已经完成最小闭环、System Prompt 模板、请求级模型参数覆盖、普通调用、流式调用、基础 Advisor 挂载、结构化输出、Tool Calling 基础接口、带参数 Tool、Embedding 最小接口、JPA/PostgreSQL 依赖接入、pgvector 初始化脚本、文档向量入库接口、精确相似度检索接口、最小 RAG 问答接口、RAG 文档切分入库接口、RAG 检索诊断字段、RAG 引用摘要、同名文档替换导入、来源元数据、TXT/Markdown 文件上传导入、Markdown 标题感知切分、RAG 来源过滤检索、Markdown 低价值 chunk 合并、RAG 稳定来源身份替换、Chat Memory JVM 内存版最小闭环、Chat Memory 会话清理接口、Agent 学习助手最小闭环和 Agent 显式 State + Step 记录。
+
+当前数据库配置已启动到执行 schema 阶段；`vector(2560)` 字段可保留，但当前 pgvector HNSW 索引最多支持 2000 维，因此初始化脚本暂不创建 HNSW 索引。向量入库、检索代码、最小 RAG 接口、RAG 文档切分入库接口、RAG 检索诊断字段和 RAG 自然切分策略已编译通过，并已通过真实请求验证。RAG 引用摘要、同名文档替换导入、来源元数据、TXT/Markdown 文件上传导入、Markdown 标题感知切分、RAG 来源过滤检索、Markdown 低价值 chunk 合并和 RAG 稳定来源身份替换已完成代码实现。Chat Memory JVM 内存版和会话清理接口已完成代码实现。Agent 学习助手最小闭环和显式 State + Step 记录已完成代码实现，待真实接口调用验证。
 
 ## Next Task
 
@@ -233,15 +257,15 @@ qwen3.5:4b
 ```text
 真实接口验证
 → 解释 Agent 与 Tool Calling / Workflow 的区别
-→ 增加显式状态对象
 → 增加多步执行循环和停止条件
 ```
 
 验收标准：
 
 - `/api/ai/agent/study` 能调用学习进度工具
+- `/api/ai/agent/study/steps` 能返回 steps 和 observation
 - 同一个 conversationId 下 Agent 能保留学习对话上下文
-- 明确第一版 Agent 尚未实现多步执行循环
+- 明确当前 steps 版是固定两步，尚未实现动态多步循环
 
 ## Pending
 
@@ -261,6 +285,7 @@ qwen3.5:4b
 - [x] Chat Memory JVM 内存版最小闭环
 - [x] Chat Memory 会话清理接口
 - [x] Agent 学习助手最小闭环
+- [x] Agent 显式 State + Step 记录
 - [ ] MCP
 - [ ] Observability
 - [ ] Evaluation

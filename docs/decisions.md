@@ -940,3 +940,51 @@ note
 - 当前 Agent 是最小闭环，不是完整多步 Agent Loop。
 - 当前不执行文件修改、数据库写入、系统命令或外部请求。
 - 后续可以继续增加显式状态对象、计划/执行/观察循环、最多步数、停止条件、工具权限和审计日志。
+
+---
+
+## ADR-026: Agent 增加显式 State 和 Step 记录
+
+Status: Accepted
+
+### Decision
+
+新增接口：
+
+```text
+POST /api/ai/agent/study/steps
+```
+
+响应显式返回：
+
+```text
+conversationId
+agentType = study-agent-state-v1
+goal
+completed
+stepCount
+steps
+answer
+memoryMessageCount
+maxMemoryMessages
+note
+```
+
+当前固定两步：
+
+```text
+Step 1: TOOL_CALL LearningProgressTool#getSpringAiLearningProgress
+Step 2: MODEL_CALL ChatClient 基于 Agent State 生成最终学习建议
+```
+
+### Reason
+
+- 仅使用 `tools(...) + memoryAdvisor` 时，代码形态仍然很像 Tool Calling。
+- 显式返回 `goal / steps / observation / completed` 可以让用户看到 Agent 是围绕目标推进步骤，而不只是一次普通聊天。
+- 当前先做固定两步，避免过早引入 while 循环、动态规划、权限审批和复杂停止条件。
+
+### Impact
+
+- `/api/ai/agent/study` 保留，用于对比最小 Agent 雏形。
+- `/api/ai/agent/study/steps` 展示更明确的 Agent State 和执行轨迹。
+- 当前仍不是完整多步 Agent Loop；后续可以继续增加最大步数、动态 action 选择、工具观察结果列表和停止条件。

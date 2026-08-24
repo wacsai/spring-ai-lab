@@ -2,6 +2,7 @@ package com.yytnet.fms.ailab.agent.controller;
 
 import com.yytnet.fms.ailab.agent.dto.req.StudyAgentReq;
 import com.yytnet.fms.ailab.agent.dto.resp.StudyAgentResp;
+import com.yytnet.fms.ailab.agent.dto.resp.StudyAgentStateResp;
 import com.yytnet.fms.ailab.agent.service.StudyAgentService;
 import jakarta.validation.Valid;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -26,5 +27,14 @@ public class StudyAgentController {
     @PostMapping("/study")
     public StudyAgentResp chat(@Valid @RequestBody StudyAgentReq req) {
         return studyAgentService.chat(req);
+    }
+
+    /**
+     * 显式 State + Step 版学习助手 Agent：
+     * 先由程序记录工具观察结果，再让模型基于 State 生成最终回答。
+     */
+    @PostMapping("/study/steps")
+    public StudyAgentStateResp chatWithSteps(@Valid @RequestBody StudyAgentReq req) {
+        return studyAgentService.chatWithSteps(req);
     }
 }
