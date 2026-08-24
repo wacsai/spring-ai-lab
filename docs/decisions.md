@@ -1134,3 +1134,35 @@ stopReason=FINISH
 - Agent 仍然保留模型动态决策，但 Java 会阻止明显重复的 action。
 - 当重复 action 被阻止时，服务层会追加一个 `FINISH` step，说明已基于现有 observation 生成最终回答。
 - 后续更多 action 接入时，也应评估是否需要类似的去重、幂等或最大调用次数限制。
+
+---
+
+## ADR-031: Agent RAG_SEARCH 使用保守 Query 归一化
+
+Status: Accepted
+
+### Decision
+
+在 `POST /api/ai/agent/study/loop` 的 `RAG_SEARCH` action 执行前，服务层会对检索 query 做保守归一化。
+
+当前规则：
+
+```text
+goal 里直接出现 RAG，且不是明确问句时，使用“RAG 的核心流程是什么？”
+goal 是“继续”等模糊表达，但 memoryContext 中已有 RAG 学习方向时，也使用“RAG 的核心流程是什么？”
+```
+
+模型返回的 `decision.query` 只作为兜底，不再优先信任模型扩写后的复杂 query。
+
+### Reason
+
+- 实测中模型可能把“我想重点学习 RAG”扩写成“Spring AI RAG 架构原理、核心组件及最佳实践”。
+- 过泛 query 可能导致 pgvector 召回 Tool Calling 等无关短文本。
+- 当前是学习项目，先让检索链路稳定，比让模型自由改写 query 更重要。
+- RAG query rewrite 可以作为后续独立阶段再做，例如多 query、rerank、source filter 或质量评估。
+
+### Impact
+
+- `RAG_SEARCH` 更容易命中当前学习资料中已有的 RAG 核心流程 chunk。
+- 当前只对 RAG 学习方向做最小映射，暂不扩展成通用 query rewrite 框架。
+- 后续如果真实知识库更完整，可以放宽该规则或加入专门的 query rewrite / rerank 步骤。

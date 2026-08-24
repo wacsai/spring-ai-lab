@@ -103,6 +103,7 @@ public class StudyAgentService {
             - 如果 steps 里已经有 LearningProgressTool 的 observation，禁止再次选择 GET_LEARNING_PROGRESS，应选择 FINISH 或补齐其他缺少的 observation
             - 如果用户询问当前阶段、学习进度、下一步，并且 steps 里还没有 LearningProgressTool 的 observation，选择 GET_LEARNING_PROGRESS
             - 如果用户询问 Spring AI 概念、RAG、Memory、Tool Calling、Agent 等项目知识，并且 steps 里还没有 RAG_SEARCH 的 observation，选择 RAG_SEARCH，并在 query 中放入适合检索的问题
+            - RAG_SEARCH 的 query 要简短、贴近用户原始问题，不要扩写成“架构原理、核心组件及最佳实践”这类过泛问题
             - 如果用户问题同时需要学习进度和知识库资料，就先补齐缺少的 observation，再选择 FINISH
             - 如果 steps 里的 observation 已经足够回答用户 goal，选择 FINISH，并在 answer 中给出最终中文回答
             - 当前 Agent 只做 Spring AI 学习规划和解释，不执行文件修改、数据库写入、系统命令或外部请求
@@ -291,7 +292,7 @@ public class StudyAgentService {
                 if (ACTION_RAG_SEARCH.equals(action)) {
                     // RAG_SEARCH 只做检索，不直接让 RAG 模块生成最终回答。
                     // 检索结果作为 observation 回到 Agent State，下一轮再由模型决定是否 FINISH。
-                    String query = normalizeSearchQuery(decision.query(), goal);
+                    String query = normalizeSearchQuery(decision.query(), goal, memoryContext);
                     List<RagReferenceResp> references = ragService.retrieveReferences(
                             query,
                             AGENT_RAG_TOP_K,
@@ -473,9 +474,37 @@ public class StudyAgentService {
         return "我需要你补充一点信息：你想继续学习 RAG、Agent，还是准备进入 MCP？";
     }
 
-    private String normalizeSearchQuery(String query, String goal) {
+    private String normalizeSearchQuery(String query, String goal, String memoryContext) {
+        String normalizedGoal = goal.strip();
+        if (containsTopic(normalizedGoal, "RAG")) {
+            return resolveTopicSearchQuery("RAG", normalizedGoal);
+        }
+        if (isVagueContinuation(normalizedGoal) && containsTopic(memoryContext, "RAG")) {
+            return resolveTopicSearchQuery("RAG", normalizedGoal);
+        }
         if (query != null && !query.isBlank()) {
             return query.strip();
+        }
+        return normalizedGoal;
+    }
+
+    private boolean containsTopic(String text, String topic) {
+        return text != null && text.toUpperCase().contains(topic);
+    }
+
+    private boolean isVagueContinuation(String goal) {
+        return "继续".equals(goal)
+                || "下一步".equals(goal)
+                || "帮我规划下一步".equals(goal)
+                || "继续学习".equals(goal);
+    }
+
+    private String resolveTopicSearchQuery(String topic, String goal) {
+        if ("RAG".equals(topic) && goal.contains("？")) {
+            return goal;
+        }
+        if ("RAG".equals(topic)) {
+            return "RAG 的核心流程是什么？";
         }
         return goal;
     }
