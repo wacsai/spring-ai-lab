@@ -45,10 +45,11 @@ public class LearningProgressTool {
                         "Agent Loop RAG_SEARCH query 保守归一化",
                         "Agent 基础阶段收口",
                         "独立 spring-ai-mcp-server-demo 最小 MCP Server",
-                        "spring-ai-lab MCP Client 连接远程 MCP Server"
+                        "spring-ai-lab MCP Client 连接远程 MCP Server",
+                        "MCP 带参数订单查询工具"
                 ),
                 "MCP 真实接口验证",
-                "当前 MCP 阶段先完成独立 Server 暴露远程工具、主项目 Client 发现并注册远程工具的最小闭环；下一步通过真实请求验证模型能否调用远程 MCP tool。",
+                "当前 MCP 阶段已覆盖无参数远程工具和带参数远程工具；下一步通过真实请求验证模型能否提取订单号并通过 MCP 传给远程 Server。",
                 "LearningProgressTool#getSpringAiLearningProgress"
         );
     }

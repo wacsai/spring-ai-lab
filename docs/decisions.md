@@ -1245,3 +1245,39 @@ POST /api/ai/mcp/chat
 - `spring-ai-lab` 的 MCP Server 地址通过配置管理，默认 `SPRING_AI_MCP_SERVER_URL=http://localhost:8081`。
 - 如果 MCP Server 未启动，`POST /api/ai/mcp/chat` 会返回 MCP 调用失败；这是当前阶段可接受的学习边界。
 - 后续可以在 MCP Server 中继续增加 Resource / Prompt 或真实业务工具，但当前不提前扩展。
+
+---
+
+## ADR-034: MCP 带参数工具使用内存订单查询
+
+Status: Accepted
+
+### Decision
+
+在 `spring-ai-mcp-server-demo` 中新增带参数 MCP 工具：
+
+```text
+McpOrderTool#getMcpOrderStatus(orderNo)
+```
+
+该工具使用内存 `Map` 模拟订单数据：
+
+```text
+A1001 已发货
+A1002 待付款
+A1003 已签收
+```
+
+主项目 `spring-ai-lab` 仍然只通过 MCP Client 自动发现远程工具，并在 `POST /api/ai/mcp/chat` 中注册远程 `ToolCallbackProvider`。
+
+### Reason
+
+- 无参数 MCP 工具只能证明远程工具发现和调用链路可用。
+- 带参数工具可以验证模型从用户问题中提取参数、Spring AI 生成 tool call arguments、MCP Client 把参数传给远程 Server、远程 Java 方法拿到参数并返回结果。
+- 使用内存订单数据可以聚焦 MCP 参数链路，不提前引入数据库或真实业务系统。
+
+### Impact
+
+- `spring-ai-mcp-server-demo` 的 compiler 配置开启 `parameters=true`，用于保留 `orderNo` 参数名。
+- 真实验证时重新启动 MCP Server 后，主项目应能发现 2 个远程 MCP tools。
+- 后续接入真实订单系统时，需要补充权限校验、参数校验、审计日志、超时和失败降级。

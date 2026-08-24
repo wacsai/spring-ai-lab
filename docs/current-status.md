@@ -90,6 +90,8 @@ Last Updated: 2026-08-24
 - [x] 已配置 MCP Client 通过 Streamable HTTP 连接 `http://localhost:8081/mcp`
 - [x] 已提供 `POST /api/ai/mcp/chat`
 - [x] 已在 ChatClient 请求中注册 MCP Client 自动发现的远程 `ToolCallbackProvider`
+- [x] 已在 `spring-ai-mcp-server-demo` 增加带参数 MCP 工具 `getMcpOrderStatus(orderNo)`
+- [x] 已在 MCP Server 编译配置中开启 `parameters=true`，用于保留 `orderNo` 参数名
 
 ### GPU / Docker
 
@@ -118,7 +120,7 @@ Last Updated: 2026-08-24
 
 ## Current Stage
 
-**MCP Server + MCP Client 最小接入已完成**
+**MCP Server + MCP Client 带参数工具接入已完成**
 
 当前真实状态：
 
@@ -348,19 +350,42 @@ HTTP + MCP 协议访问 spring-ai-mcp-server-demo:8081/mcp
 模型基于远程工具结果生成最终回答
 ```
 
-当前代码已经完成最小闭环、System Prompt 模板、请求级模型参数覆盖、普通调用、流式调用、基础 Advisor 挂载、结构化输出、Tool Calling 基础接口、带参数 Tool、Embedding 最小接口、JPA/PostgreSQL 依赖接入、pgvector 初始化脚本、文档向量入库接口、精确相似度检索接口、最小 RAG 问答接口、RAG 文档切分入库接口、RAG 检索诊断字段、RAG 引用摘要、同名文档替换导入、来源元数据、TXT/Markdown 文件上传导入、Markdown 标题感知切分、RAG 来源过滤检索、Markdown 低价值 chunk 合并、RAG 稳定来源身份替换、Chat Memory JVM 内存版最小闭环、Chat Memory 会话清理接口、Agent 学习助手最小闭环、Agent 显式 State + Step 记录、Agent 动态 Loop + Stop Condition、Agent Loop RAG_SEARCH 检索动作、Agent Loop ASK_USER 澄清动作、Agent Loop 重复 action 保护、RAG_SEARCH query 保守归一化、Agent 基础阶段收口和 MCP Server + Client 最小接入。
+MCP 带参数订单查询链路：
+
+```text
+Client
+↓
+POST /api/ai/mcp/chat
+↓
+用户问题包含订单号，例如 A1001
+↓
+ChatClient 把远程 getMcpOrderStatus 工具 schema 交给模型
+↓
+模型生成 tool call，并提取 orderNo=A1001
+↓
+Spring AI MCP Client 通过 HTTP + MCP 调用 spring-ai-mcp-server-demo
+↓
+McpOrderTool#getMcpOrderStatus(orderNo)
+↓
+返回订单状态、物流、预计送达时间和 source
+↓
+模型基于工具结果生成最终回答
+```
+
+当前代码已经完成最小闭环、System Prompt 模板、请求级模型参数覆盖、普通调用、流式调用、基础 Advisor 挂载、结构化输出、Tool Calling 基础接口、带参数 Tool、Embedding 最小接口、JPA/PostgreSQL 依赖接入、pgvector 初始化脚本、文档向量入库接口、精确相似度检索接口、最小 RAG 问答接口、RAG 文档切分入库接口、RAG 检索诊断字段、RAG 引用摘要、同名文档替换导入、来源元数据、TXT/Markdown 文件上传导入、Markdown 标题感知切分、RAG 来源过滤检索、Markdown 低价值 chunk 合并、RAG 稳定来源身份替换、Chat Memory JVM 内存版最小闭环、Chat Memory 会话清理接口、Agent 学习助手最小闭环、Agent 显式 State + Step 记录、Agent 动态 Loop + Stop Condition、Agent Loop RAG_SEARCH 检索动作、Agent Loop ASK_USER 澄清动作、Agent Loop 重复 action 保护、RAG_SEARCH query 保守归一化、Agent 基础阶段收口、MCP Server + Client 最小接入和 MCP 带参数工具。
 
 当前数据库配置已启动到执行 schema 阶段；`vector(2560)` 字段可保留，但当前 pgvector HNSW 索引最多支持 2000 维，因此初始化脚本暂不创建 HNSW 索引。向量入库、检索代码、最小 RAG 接口、RAG 文档切分入库接口、RAG 检索诊断字段和 RAG 自然切分策略已编译通过，并已通过真实请求验证。RAG 引用摘要、同名文档替换导入、来源元数据、TXT/Markdown 文件上传导入、Markdown 标题感知切分、RAG 来源过滤检索、Markdown 低价值 chunk 合并和 RAG 稳定来源身份替换已完成代码实现。Chat Memory JVM 内存版和会话清理接口已完成代码实现。Agent 学习助手最小闭环、显式 State + Step 记录、动态 Loop + Stop Condition、RAG_SEARCH action 和 ASK_USER action 已完成代码实现，待真实接口调用验证。
 
 ## Next Task
 
-进入 **MCP 真实接口验证**：
+进入 **MCP 带参数工具真实接口验证**：
 
 ```text
 启动 spring-ai-mcp-server-demo:8081
 → 启动 spring-ai-lab:8080
 → POST /api/ai/mcp/chat
 → 验证模型能否调用远程 MCP tool
+→ 验证模型能否提取 orderNo 并通过 MCP 传给远程 Server
 → 从日志确认 toolCalls / MCP 工具返回 / 最终回答
 ```
 
@@ -397,7 +422,8 @@ HTTP + MCP 协议访问 spring-ai-mcp-server-demo:8081/mcp
 - [x] Agent Loop RAG_SEARCH query 保守归一化
 - [x] Agent 基础阶段收口
 - [x] MCP Server + Client 最小接入
-- [ ] MCP 真实接口验证
+- [x] MCP 带参数工具接入
+- [ ] MCP 带参数工具真实接口验证
 - [ ] Observability
 - [ ] Evaluation
 - [ ] Qdrant 对比实验

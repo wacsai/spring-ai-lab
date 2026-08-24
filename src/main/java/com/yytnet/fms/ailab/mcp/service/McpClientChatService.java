@@ -27,6 +27,8 @@ public class McpClientChatService {
             - 先给结论，再给必要解释
             - 当前接口用于学习 Spring AI MCP Client
             - 当用户询问当前学习进度、已完成内容、当前阶段、下一步学习内容时，必须调用 MCP Server 提供的远程工具获取真实结果
+            - 当用户询问订单状态、物流、发货、签收、付款情况，并且提供了订单号时，必须调用 MCP Server 提供的远程订单查询工具
+            - 如果用户想查订单但没有提供订单号，先要求用户补充订单号
             - 当前 MCP Server 是 spring-ai-mcp-server-demo，它运行在独立 Spring Boot 进程中
             - MCP 工具不是当前进程里的本地 @Tool 对象，而是通过 HTTP + MCP 协议从远程 Server 暴露出来的 tool
             - 如果使用了 MCP 工具结果，回答末尾必须包含一行：数据来源：MCP Server 工具返回的 source 字段

@@ -115,6 +115,7 @@ Spring AI MCP Client
 spring-ai-mcp-server-demo:8081
 ↓
 McpLearningTool#getSpringAiMcpLearningProgress
+McpOrderTool#getMcpOrderStatus(orderNo)
 ```
 
 当前 MCP 阶段只验证远程工具调用闭环，不接数据库、不提前实现 Resource / Prompt / Sampling / Elicitation。
