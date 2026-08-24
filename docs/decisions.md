@@ -1166,3 +1166,41 @@ goal 是“继续”等模糊表达，但 memoryContext 中已有 RAG 学习方�
 - `RAG_SEARCH` 更容易命中当前学习资料中已有的 RAG 核心流程 chunk。
 - 当前只对 RAG 学习方向做最小映射，暂不扩展成通用 query rewrite 框架。
 - 后续如果真实知识库更完整，可以放宽该规则或加入专门的 query rewrite / rerank 步骤。
+
+---
+
+## ADR-032: Agent 基础阶段收口
+
+Status: Accepted
+
+### Decision
+
+Agent 基础阶段到此收口，当前项目不继续深挖 Prompt 微调、RAG query rewrite、rerank、复杂工具编排、权限审批、状态持久化或多 Agent 协作。
+
+当前 Agent 学习 demo 已覆盖：
+
+```text
+Goal
+State
+Action
+Observation
+Loop
+Stop Condition
+Memory
+Java Safety Boundary
+```
+
+下一阶段进入 MCP 基础学习。
+
+### Reason
+
+- 当前 Agent demo 已经能体现“模型决策 action，Java 执行 action，observation 回到 state，再由模型继续判断”的核心结构。
+- 继续围绕 `ASK_USER`、RAG query 或 Prompt 细节反复调参，收益不高，容易偏离学习主线。
+- 实测已经证明模型 action 选择存在不稳定性；这类问题更适合后续 Observability / Evaluation 阶段系统评估，而不是在当前阶段凭手工请求反复微调。
+- 生产级 Agent 还需要权限、审计、幂等、状态持久化、成本控制、失败恢复和人工介入等能力，当前学习 demo 不提前扩展。
+
+### Impact
+
+- 保留现有 `/api/ai/agent/study`、`/api/ai/agent/study/steps`、`/api/ai/agent/study/loop` 用于回顾 Agent 基础概念。
+- 当前 Agent 行为只作为学习演示，不作为生产级 Agent 框架。
+- 后续进入 MCP 时，优先理解 MCP 与 Tool Calling、Agent action 的关系，再决定是否实现最小 MCP demo。

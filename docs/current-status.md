@@ -84,6 +84,7 @@ Last Updated: 2026-08-24
 - [x] 已支持信息不足时返回 `stopReason=WAITING_USER_INPUT` 并等待用户补充
 - [x] 已为 Agent Loop 增加重复 action 保护，避免模型反复选择 `RAG_SEARCH` / `GET_LEARNING_PROGRESS` 导致 `MAX_STEPS_REACHED`
 - [x] 已为 Agent Loop 增加 `RAG_SEARCH` query 保守归一化，避免模型扩写过泛 query 影响 pgvector 召回
+- [x] 已完成 Agent 基础阶段收口，明确当前为学习 demo，不继续深挖 Prompt 调优和复杂 Agent 编排
 
 ### GPU / Docker
 
@@ -112,7 +113,7 @@ Last Updated: 2026-08-24
 
 ## Current Stage
 
-**Agent Loop 已支持 ASK_USER 澄清动作**
+**Agent 基础阶段已完成**
 
 当前真实状态：
 
@@ -290,31 +291,55 @@ action=FINISH 时停止循环并返回 answer
 只把用户 goal 和最终 answer 写回 ChatMemory，内部决策步骤不写入 Memory
 ```
 
-当前代码已经完成最小闭环、System Prompt 模板、请求级模型参数覆盖、普通调用、流式调用、基础 Advisor 挂载、结构化输出、Tool Calling 基础接口、带参数 Tool、Embedding 最小接口、JPA/PostgreSQL 依赖接入、pgvector 初始化脚本、文档向量入库接口、精确相似度检索接口、最小 RAG 问答接口、RAG 文档切分入库接口、RAG 检索诊断字段、RAG 引用摘要、同名文档替换导入、来源元数据、TXT/Markdown 文件上传导入、Markdown 标题感知切分、RAG 来源过滤检索、Markdown 低价值 chunk 合并、RAG 稳定来源身份替换、Chat Memory JVM 内存版最小闭环、Chat Memory 会话清理接口、Agent 学习助手最小闭环、Agent 显式 State + Step 记录、Agent 动态 Loop + Stop Condition、Agent Loop RAG_SEARCH 检索动作、Agent Loop ASK_USER 澄清动作、Agent Loop 重复 action 保护和 RAG_SEARCH query 保守归一化。
+Agent 阶段收口：
+
+```text
+当前 Agent 是学习 demo，已经覆盖：
+Goal
+State
+Action
+Observation
+Loop
+Stop Condition
+Memory
+Java Safety Boundary
+```
+
+当前不继续深挖：
+
+```text
+Prompt 微调
+RAG query rewrite
+rerank
+复杂工具编排
+权限审批
+状态持久化
+多 Agent 协作
+```
+
+模型 action 选择存在不稳定性，已通过 Java 侧重复 action 保护和保守 query 归一化做最小兜底；后续进入 Observability / Evaluation 阶段再系统评估。
+
+当前代码已经完成最小闭环、System Prompt 模板、请求级模型参数覆盖、普通调用、流式调用、基础 Advisor 挂载、结构化输出、Tool Calling 基础接口、带参数 Tool、Embedding 最小接口、JPA/PostgreSQL 依赖接入、pgvector 初始化脚本、文档向量入库接口、精确相似度检索接口、最小 RAG 问答接口、RAG 文档切分入库接口、RAG 检索诊断字段、RAG 引用摘要、同名文档替换导入、来源元数据、TXT/Markdown 文件上传导入、Markdown 标题感知切分、RAG 来源过滤检索、Markdown 低价值 chunk 合并、RAG 稳定来源身份替换、Chat Memory JVM 内存版最小闭环、Chat Memory 会话清理接口、Agent 学习助手最小闭环、Agent 显式 State + Step 记录、Agent 动态 Loop + Stop Condition、Agent Loop RAG_SEARCH 检索动作、Agent Loop ASK_USER 澄清动作、Agent Loop 重复 action 保护、RAG_SEARCH query 保守归一化和 Agent 基础阶段收口。
 
 当前数据库配置已启动到执行 schema 阶段；`vector(2560)` 字段可保留，但当前 pgvector HNSW 索引最多支持 2000 维，因此初始化脚本暂不创建 HNSW 索引。向量入库、检索代码、最小 RAG 接口、RAG 文档切分入库接口、RAG 检索诊断字段和 RAG 自然切分策略已编译通过，并已通过真实请求验证。RAG 引用摘要、同名文档替换导入、来源元数据、TXT/Markdown 文件上传导入、Markdown 标题感知切分、RAG 来源过滤检索、Markdown 低价值 chunk 合并和 RAG 稳定来源身份替换已完成代码实现。Chat Memory JVM 内存版和会话清理接口已完成代码实现。Agent 学习助手最小闭环、显式 State + Step 记录、动态 Loop + Stop Condition、RAG_SEARCH action 和 ASK_USER action 已完成代码实现，待真实接口调用验证。
 
 ## Next Task
 
-进入 **Agent Loop 真实接口验证与行为对比**：
+进入 **MCP 基础学习**：
 
 ```text
-真实接口验证 POST /api/ai/agent/study/loop
-→ 对比只问学习进度、只问知识点、同时问学习进度和知识点、问题不明确四类 goal 的 action 路径
-→ 再评估是否增加更多 action、失败重试、权限边界或进入 MCP
+MCP 基础概念
+→ MCP Server / MCP Client / Tool / Resource / Prompt 的关系
+→ Spring AI 中 MCP 的最小接入方式
+→ 再决定是否实现本地最小 MCP demo
 ```
 
 验收标准：
 
-- `/api/ai/agent/study` 能调用学习进度工具
-- `/api/ai/agent/study/steps` 能返回 steps 和 observation
-- `/api/ai/agent/study/loop` 能返回动态 steps、stopReason 和最终 answer
-- `/api/ai/agent/study/loop` 在知识类问题中能触发 `RAG_SEARCH`
-- `/api/ai/agent/study/loop` 在信息不足时能触发 `ASK_USER` 并返回 `WAITING_USER_INPUT`
-- `/api/ai/agent/study/loop` 不应连续重复执行同一个检索类 action
-- `/api/ai/agent/study/loop` 对 RAG 学习方向应使用简短稳定的 RAG 检索 query
-- 同一个 conversationId 下 Agent 能保留学习对话上下文
-- 明确 `/study/steps` 是固定两步，`/study/loop` 是受限 action 集合下的动态循环
+- 理解 MCP 和 Tool Calling 的区别
+- 理解 MCP Server 与 Spring Boot 应用的关系
+- 明确当前阶段是否先做 MCP Client，还是先做本地 MCP Server
+- 不提前实现复杂外部系统集成
 
 ## Pending
 
@@ -340,6 +365,7 @@ action=FINISH 时停止循环并返回 answer
 - [x] Agent Loop ASK_USER 澄清动作
 - [x] Agent Loop 重复 action 保护
 - [x] Agent Loop RAG_SEARCH query 保守归一化
+- [x] Agent 基础阶段收口
 - [ ] MCP
 - [ ] Observability
 - [ ] Evaluation

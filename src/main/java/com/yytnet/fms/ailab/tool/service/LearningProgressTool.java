@@ -20,7 +20,7 @@ public class LearningProgressTool {
     public LearningProgressResp getSpringAiLearningProgress() {
         // 这个工具是只读的：不查数据库、不写文件、不调用外部系统，方便先验证 Tool Calling 的核心链路。
         return new LearningProgressResp(
-                "Agent Loop 已支持 ASK_USER 澄清动作，准备进行真实接口验证与行为对比",
+                "Agent 基础阶段已完成，准备进入 MCP 基础学习",
                 List.of(
                         "ChatClient 普通调用",
                         "System Prompt",
@@ -40,10 +40,13 @@ public class LearningProgressTool {
                         "Agent 显式 State + Step 记录",
                         "Agent 动态 Loop + Stop Condition",
                         "Agent Loop RAG_SEARCH 检索动作",
-                        "Agent Loop ASK_USER 澄清动作"
+                        "Agent Loop ASK_USER 澄清动作",
+                        "Agent Loop 重复 action 保护",
+                        "Agent Loop RAG_SEARCH query 保守归一化",
+                        "Agent 基础阶段收口"
                 ),
-                "Agent Loop 真实接口验证与行为对比",
-                "当前工具返回的是项目内固定学习状态，用于验证模型能按需调用 Java 本地方法，并为 Agent Loop 提供状态依据；RAG_SEARCH action 负责从知识库检索资料作为 observation，ASK_USER action 负责在信息不足时停止并等待用户补充。",
+                "MCP",
+                "当前 Agent 是学习 demo，已覆盖 Goal、State、Action、Observation、Loop、Stop Condition、Memory 和 Java 安全边界；模型 action 选择仍存在不稳定性，暂不继续做 Prompt 调优，后续在 Evaluation / Observability 阶段再系统评估。",
                 "LearningProgressTool#getSpringAiLearningProgress"
         );
     }
