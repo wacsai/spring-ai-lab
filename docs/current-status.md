@@ -76,6 +76,8 @@ Last Updated: 2026-08-24
 - [x] 已更新 `LearningProgressTool` 的固定学习进度到当前阶段
 - [x] 已提供 `POST /api/ai/agent/study/steps`
 - [x] 已实现显式 Agent State + Step 记录：goal、steps、observation、completed、answer
+- [x] 已提供 `POST /api/ai/agent/study/loop`
+- [x] 已实现动态 Agent Loop + Stop Condition：模型决定 action，Java 执行动作，记录 observation，并在 FINISH 或 maxSteps 时停止
 
 ### GPU / Docker
 
@@ -104,7 +106,7 @@ Last Updated: 2026-08-24
 
 ## Current Stage
 
-**Agent 显式 State + Step 记录已实现**
+**Agent 动态 Loop + Stop Condition 已实现**
 
 当前真实状态：
 
@@ -246,26 +248,55 @@ Observation 写入 steps[1]
 返回 goal + completed + steps + answer
 ```
 
-当前代码已经完成最小闭环、System Prompt 模板、请求级模型参数覆盖、普通调用、流式调用、基础 Advisor 挂载、结构化输出、Tool Calling 基础接口、带参数 Tool、Embedding 最小接口、JPA/PostgreSQL 依赖接入、pgvector 初始化脚本、文档向量入库接口、精确相似度检索接口、最小 RAG 问答接口、RAG 文档切分入库接口、RAG 检索诊断字段、RAG 引用摘要、同名文档替换导入、来源元数据、TXT/Markdown 文件上传导入、Markdown 标题感知切分、RAG 来源过滤检索、Markdown 低价值 chunk 合并、RAG 稳定来源身份替换、Chat Memory JVM 内存版最小闭环、Chat Memory 会话清理接口、Agent 学习助手最小闭环和 Agent 显式 State + Step 记录。
+Agent Loop 链路：
 
-当前数据库配置已启动到执行 schema 阶段；`vector(2560)` 字段可保留，但当前 pgvector HNSW 索引最多支持 2000 维，因此初始化脚本暂不创建 HNSW 索引。向量入库、检索代码、最小 RAG 接口、RAG 文档切分入库接口、RAG 检索诊断字段和 RAG 自然切分策略已编译通过，并已通过真实请求验证。RAG 引用摘要、同名文档替换导入、来源元数据、TXT/Markdown 文件上传导入、Markdown 标题感知切分、RAG 来源过滤检索、Markdown 低价值 chunk 合并和 RAG 稳定来源身份替换已完成代码实现。Chat Memory JVM 内存版和会话清理接口已完成代码实现。Agent 学习助手最小闭环和显式 State + Step 记录已完成代码实现，待真实接口调用验证。
+```text
+Client
+↓
+POST /api/ai/agent/study/loop
+↓
+StudyAgentController
+↓
+StudyAgentService.chatWithLoop()
+↓
+读取 conversationId 对应的历史 Memory 作为 memoryContext
+↓
+Loop Step N: ChatClient 结构化输出 StudyAgentDecision
+↓
+action=GET_LEARNING_PROGRESS 时，Java 服务层执行 LearningProgressTool
+↓
+工具返回结果作为 observation 写入 steps
+↓
+下一轮把 goal + memoryContext + steps 再交给模型判断
+↓
+action=FINISH 时停止循环并返回 answer
+↓
+达到 maxSteps 仍未 FINISH 时按 MAX_STEPS_REACHED 停止
+↓
+只把用户 goal 和最终 answer 写回 ChatMemory，内部决策步骤不写入 Memory
+```
+
+当前代码已经完成最小闭环、System Prompt 模板、请求级模型参数覆盖、普通调用、流式调用、基础 Advisor 挂载、结构化输出、Tool Calling 基础接口、带参数 Tool、Embedding 最小接口、JPA/PostgreSQL 依赖接入、pgvector 初始化脚本、文档向量入库接口、精确相似度检索接口、最小 RAG 问答接口、RAG 文档切分入库接口、RAG 检索诊断字段、RAG 引用摘要、同名文档替换导入、来源元数据、TXT/Markdown 文件上传导入、Markdown 标题感知切分、RAG 来源过滤检索、Markdown 低价值 chunk 合并、RAG 稳定来源身份替换、Chat Memory JVM 内存版最小闭环、Chat Memory 会话清理接口、Agent 学习助手最小闭环、Agent 显式 State + Step 记录和 Agent 动态 Loop + Stop Condition。
+
+当前数据库配置已启动到执行 schema 阶段；`vector(2560)` 字段可保留，但当前 pgvector HNSW 索引最多支持 2000 维，因此初始化脚本暂不创建 HNSW 索引。向量入库、检索代码、最小 RAG 接口、RAG 文档切分入库接口、RAG 检索诊断字段和 RAG 自然切分策略已编译通过，并已通过真实请求验证。RAG 引用摘要、同名文档替换导入、来源元数据、TXT/Markdown 文件上传导入、Markdown 标题感知切分、RAG 来源过滤检索、Markdown 低价值 chunk 合并和 RAG 稳定来源身份替换已完成代码实现。Chat Memory JVM 内存版和会话清理接口已完成代码实现。Agent 学习助手最小闭环、显式 State + Step 记录和动态 Loop + Stop Condition 已完成代码实现，待真实接口调用验证。
 
 ## Next Task
 
-进入 **Agent 后续增强**：
+进入 **Agent Loop 验证与边界增强**：
 
 ```text
-真实接口验证
-→ 解释 Agent 与 Tool Calling / Workflow 的区别
-→ 增加多步执行循环和停止条件
+真实接口验证 POST /api/ai/agent/study/loop
+→ 对比 /study、/study/steps、/study/loop 的差异
+→ 再评估是否增加更多 action、失败重试、权限边界或进入 MCP
 ```
 
 验收标准：
 
 - `/api/ai/agent/study` 能调用学习进度工具
 - `/api/ai/agent/study/steps` 能返回 steps 和 observation
+- `/api/ai/agent/study/loop` 能返回动态 steps、stopReason 和最终 answer
 - 同一个 conversationId 下 Agent 能保留学习对话上下文
-- 明确当前 steps 版是固定两步，尚未实现动态多步循环
+- 明确 `/study/steps` 是固定两步，`/study/loop` 是受限 action 集合下的动态循环
 
 ## Pending
 
@@ -286,6 +317,7 @@ Observation 写入 steps[1]
 - [x] Chat Memory 会话清理接口
 - [x] Agent 学习助手最小闭环
 - [x] Agent 显式 State + Step 记录
+- [x] Agent 动态 Loop + Stop Condition
 - [ ] MCP
 - [ ] Observability
 - [ ] Evaluation

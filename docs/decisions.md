@@ -988,3 +988,39 @@ Step 2: MODEL_CALL ChatClient 基于 Agent State 生成最终学习建议
 - `/api/ai/agent/study` 保留，用于对比最小 Agent 雏形。
 - `/api/ai/agent/study/steps` 展示更明确的 Agent State 和执行轨迹。
 - 当前仍不是完整多步 Agent Loop；后续可以继续增加最大步数、动态 action 选择、工具观察结果列表和停止条件。
+
+---
+
+## ADR-027: Agent Loop 先使用受限动作集合
+
+Status: Accepted
+
+### Decision
+
+Agent 阶段新增动态 Loop 接口：
+
+```text
+POST /api/ai/agent/study/loop
+```
+
+当前只允许模型在两个 action 中决策：
+
+```text
+GET_LEARNING_PROGRESS
+FINISH
+```
+
+服务层负责执行 action、记录 observation、判断 stop condition，并限制最多执行 3 步。
+
+### Reason
+
+- Agent 的关键不是让模型直接执行任意代码，而是让模型在受控动作集合中决定下一步。
+- Java 服务层保留真实执行权，便于后续增加权限、参数校验、审计、失败处理和停止条件。
+- 当前项目仍处于学习阶段，先用学习进度工具验证 Loop 本质，不提前接入文件修改、数据库写入或外部系统操作。
+
+### Impact
+
+- `/api/ai/agent/study` 保留为 Tool + Memory + 固定目标边界的最小 Agent。
+- `/api/ai/agent/study/steps` 保留为固定两步的显式 State 学习版本。
+- `/api/ai/agent/study/loop` 用于观察动态决策、observation 传递和停止条件。
+- 内部决策步骤不写入 Chat Memory，只把用户 goal 和最终 answer 作为一轮对话保存。

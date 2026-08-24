@@ -1,6 +1,8 @@
 package com.yytnet.fms.ailab.agent.service;
 
+import com.yytnet.fms.ailab.agent.dto.model.StudyAgentDecision;
 import com.yytnet.fms.ailab.agent.dto.req.StudyAgentReq;
+import com.yytnet.fms.ailab.agent.dto.resp.StudyAgentLoopResp;
 import com.yytnet.fms.ailab.agent.dto.resp.StudyAgentResp;
 import com.yytnet.fms.ailab.agent.dto.resp.StudyAgentStateResp;
 import com.yytnet.fms.ailab.agent.dto.resp.StudyAgentStepResp;
@@ -12,6 +14,9 @@ import org.springframework.ai.chat.client.ChatClient;
 import org.springframework.ai.chat.client.advisor.MessageChatMemoryAdvisor;
 import org.springframework.ai.chat.client.advisor.SimpleLoggerAdvisor;
 import org.springframework.ai.chat.memory.ChatMemory;
+import org.springframework.ai.chat.messages.AssistantMessage;
+import org.springframework.ai.chat.messages.Message;
+import org.springframework.ai.chat.messages.UserMessage;
 import org.springframework.ai.ollama.api.OllamaChatOptions;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
@@ -24,6 +29,10 @@ public class StudyAgentService {
 
     private static final String AGENT_TYPE = "study-agent-v1";
     private static final String STEPS_AGENT_TYPE = "study-agent-state-v1";
+    private static final String LOOP_AGENT_TYPE = "study-agent-loop-v1";
+    private static final int MAX_LOOP_STEPS = 3;
+    private static final String ACTION_GET_LEARNING_PROGRESS = "GET_LEARNING_PROGRESS";
+    private static final String ACTION_FINISH = "FINISH";
 
     // Memory 先处理历史上下文，Logger 再记录最终请求，方便观察 Agent 看到的上下文。
     private static final SimpleLoggerAdvisor SIMPLE_LOGGER_ADVISOR = SimpleLoggerAdvisor.builder()
@@ -68,6 +77,29 @@ public class StudyAgentService {
             - 只基于当前 Agent State 和当前对话上下文回答
             - 明确说明这是“显式 State + Step 记录版 Agent”
             - 回答末尾包含：数据来源：LearningProgressTool
+            """;
+
+    private static final String LOOP_DECISION_PROMPT = """
+            你是 spring-ai-lab 项目的学习助手 Agent 决策器。
+
+            你只能在下面两个 action 中选择一个：
+            - GET_LEARNING_PROGRESS：需要读取项目学习进度
+            - FINISH：已经具备足够信息，可以输出最终回答
+
+            决策规则：
+            - 如果 steps 里还没有 LearningProgressTool 的 observation，优先选择 GET_LEARNING_PROGRESS
+            - 如果 steps 里已经有 LearningProgressTool 的 observation，选择 FINISH，并在 answer 中给出最终中文回答
+            - 当前 Agent 只做 Spring AI 学习规划和解释，不执行文件修改、数据库写入、系统命令或外部请求
+            - answer 要先给结论，再给必要解释
+
+            当前 goal:
+            {goal}
+
+            当前 conversationId 的历史对话:
+            {memoryContext}
+
+            当前 Agent steps:
+            {steps}
             """;
 
     private final ChatClient chatClient;
@@ -176,6 +208,143 @@ public class StudyAgentService {
         } catch (RuntimeException ex) {
             throw new AiAgentException("学习助手 Agent Step 调用失败", ex);
         }
+    }
+
+    public StudyAgentLoopResp chatWithLoop(StudyAgentReq req) {
+        try {
+            String conversationId = req.conversationId().strip();
+            String goal = req.message().strip();
+            String memoryContext = formatMemoryContext(chatMemory.get(conversationId));
+            List<StudyAgentStepResp> steps = new ArrayList<>();
+            boolean completed = false;
+            String stopReason = "MAX_STEPS_REACHED";
+            String answer = "";
+
+            for (int stepNo = 1; stepNo <= MAX_LOOP_STEPS; stepNo++) {
+                StudyAgentDecision decision = decideNextAction(goal, memoryContext, steps);
+                String action = normalizeAction(decision.action());
+
+                if (ACTION_GET_LEARNING_PROGRESS.equals(action)) {
+                    // 动态 Loop 的关键点：模型只决定“要查学习进度”，真正执行 Java 方法的是服务层。
+                    LearningProgressResp progress = learningProgressTool.getSpringAiLearningProgress();
+                    steps.add(new StudyAgentStepResp(
+                            stepNo,
+                            "TOOL_CALL: LearningProgressTool#getSpringAiLearningProgress",
+                            formatProgressObservation(progress)
+                    ));
+                    continue;
+                }
+
+                if (ACTION_FINISH.equals(action)) {
+                    answer = normalizeFinalAnswer(decision.answer(), decision.reason());
+                    steps.add(new StudyAgentStepResp(
+                            stepNo,
+                            "FINISH: 模型判断信息足够，停止 Agent Loop",
+                            summarizeAnswer(answer)
+                    ));
+                    completed = true;
+                    stopReason = ACTION_FINISH;
+                    break;
+                }
+
+                steps.add(new StudyAgentStepResp(
+                        stepNo,
+                        "UNSUPPORTED_ACTION: " + action,
+                        "模型返回了当前阶段不支持的 action，Agent Loop 停止。"
+                ));
+                stopReason = "UNSUPPORTED_ACTION";
+                break;
+            }
+
+            if (answer.isBlank()) {
+                answer = "已达到最大执行步数，当前 Agent Loop 没有生成最终回答。";
+            }
+
+            // 内部决策不写入 Memory；只把用户目标和最终答案作为一轮对话保存，避免污染后续上下文。
+            chatMemory.add(conversationId, List.of(
+                    new UserMessage(goal),
+                    new AssistantMessage(answer)
+            ));
+
+            return new StudyAgentLoopResp(
+                    conversationId,
+                    LOOP_AGENT_TYPE,
+                    goal,
+                    completed,
+                    stopReason,
+                    MAX_LOOP_STEPS,
+                    steps.size(),
+                    steps,
+                    answer,
+                    chatMemory.get(conversationId).size(),
+                    MemoryChatConfig.MAX_MEMORY_MESSAGES,
+                    "这是动态 Loop 版最小 Agent：模型决定 action，Java 执行 action，记录 observation，并在 FINISH 或 maxSteps 时停止。"
+            );
+        } catch (RuntimeException ex) {
+            throw new AiAgentException("学习助手 Agent Loop 调用失败", ex);
+        }
+    }
+
+    private StudyAgentDecision decideNextAction(String goal, String memoryContext, List<StudyAgentStepResp> steps) {
+        return chatClient.prompt()
+                .system(system -> system
+                        .text(LOOP_DECISION_PROMPT)
+                        .param("goal", goal)
+                        .param("memoryContext", memoryContext)
+                        .param("steps", formatSteps(steps)))
+                .user("请根据当前 goal、memoryContext 和 steps 决定下一步 action。")
+                .advisors(SIMPLE_LOGGER_ADVISOR)
+                .options(OllamaChatOptions.builder()
+                        .model(model)
+                        .disableThinking()
+                        .temperature(0.1))
+                .call()
+                .entity(StudyAgentDecision.class, ChatClient.EntityParamSpec::validateSchema);
+    }
+
+    private String formatMemoryContext(List<Message> messages) {
+        if (messages.isEmpty()) {
+            return "无历史对话。";
+        }
+
+        List<String> lines = new ArrayList<>();
+        for (Message message : messages) {
+            lines.add("%s: %s".formatted(message.getMessageType().getValue(), message.getText()));
+        }
+        return String.join("\n", lines);
+    }
+
+    private String formatSteps(List<StudyAgentStepResp> steps) {
+        if (steps.isEmpty()) {
+            return "无执行步骤。";
+        }
+
+        List<String> lines = new ArrayList<>();
+        for (StudyAgentStepResp step : steps) {
+            lines.add("Step %d\nAction: %s\nObservation: %s".formatted(
+                    step.stepNo(),
+                    step.action(),
+                    step.observation()
+            ));
+        }
+        return String.join("\n\n", lines);
+    }
+
+    private String normalizeAction(String action) {
+        if (action == null || action.isBlank()) {
+            return "";
+        }
+        return action.strip().toUpperCase();
+    }
+
+    private String normalizeFinalAnswer(String answer, String reason) {
+        if (answer != null && !answer.isBlank()) {
+            return answer.strip();
+        }
+        if (reason != null && !reason.isBlank()) {
+            return reason.strip();
+        }
+        return "模型判断当前信息足够，但没有返回具体回答。";
     }
 
     private String formatProgressObservation(LearningProgressResp progress) {
