@@ -1279,5 +1279,6 @@ A1003 已签收
 ### Impact
 
 - `spring-ai-mcp-server-demo` 的 compiler 配置开启 `parameters=true`，用于保留 `orderNo` 参数名。
-- 真实验证时重新启动 MCP Server 后，主项目应能发现 2 个远程 MCP tools。
+- 真实验证时重新启动 MCP Server 后，主项目已能发现 2 个远程 MCP tools。
+- 已通过 `POST /api/ai/mcp/chat` 验证模型可以从“帮我查一下订单 A1001 的物流状态”中提取 `orderNo=A1001`，并通过 MCP 调用远程订单工具。
 - 后续接入真实订单系统时，需要补充权限校验、参数校验、审计日志、超时和失败降级。
