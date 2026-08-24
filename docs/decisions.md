@@ -1060,3 +1060,42 @@ RagService.retrieveReferences(...)
 - `RagService.retrieveReferences(...)` 成为可复用的检索能力，供 Agent action 调用。
 - `/api/ai/agent/study/loop` 可以根据 goal 动态选择 `GET_LEARNING_PROGRESS`、`RAG_SEARCH` 或 `FINISH`。
 - 后续如接入 MCP、外部 API 或业务数据库，也应优先按 action 暴露受控能力，而不是让模型直接执行任意操作。
+
+---
+
+## ADR-029: Agent Loop 使用 ASK_USER 表达等待用户补充
+
+Status: Accepted
+
+### Decision
+
+在 `POST /api/ai/agent/study/loop` 中新增受控 action：
+
+```text
+ASK_USER
+```
+
+当用户目标不清楚、当前 Memory 无法判断偏好，或请求超出当前 Agent 边界时，模型可以选择 `ASK_USER`。
+
+服务层收到该 action 后：
+
+```text
+completed=false
+stopReason=WAITING_USER_INPUT
+answer=需要用户补充的问题
+```
+
+并立即停止 Loop。
+
+### Reason
+
+- 真实 Agent 不应该在信息不足时强行调用工具或编造结论。
+- 等待用户补充本身就是一种明确的停止条件。
+- 由 Java 服务层识别 `ASK_USER` 并停止，可以避免模型继续执行无意义的工具调用。
+- 当前阶段只做学习助手，不执行代码修改、数据库写入、系统命令或 MCP 实现。
+
+### Impact
+
+- `/api/ai/agent/study/loop` 的 `completed=false` 不一定表示错误，也可能表示正在等待用户输入。
+- 前端或调用方可以根据 `stopReason=WAITING_USER_INPUT` 展示澄清问题。
+- 后续如果增加审批、权限确认、人工介入，也可以沿用类似 stopReason 模式。

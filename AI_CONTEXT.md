@@ -106,7 +106,7 @@ Spring AI 负责：
 
 当前真实状态：
 
-**Agent Loop 已支持 RAG_SEARCH action**
+**Agent Loop 已支持 ASK_USER 澄清动作**
 
 当前代码已经从 Controller demo 推进到基础 AI 调用链：
 
@@ -133,7 +133,7 @@ qwen3.5:4b
 当前已完成：
 
 ```text
-代码结构 + 编译验证 + 真实接口调用验证 + System Prompt + 请求级 Model Options + Streaming + SimpleLoggerAdvisor + Structured Output + Tool Calling + Embedding + JPA/PostgreSQL 配置 + pgvector 最小存取接口 + RAG 最小闭环 + RAG 文档切分入库 + RAG 检索诊断 + RAG 自然切分策略 + RAG 引用摘要 + RAG 同名文档替换导入 + RAG 文档来源元数据 + TXT/Markdown 文件导入 + Markdown 标题感知切分 + RAG 来源过滤检索 + Markdown 低价值 chunk 合并 + RAG 稳定来源身份替换 + Chat Memory JVM 内存版最小闭环 + Chat Memory 会话清理接口 + Agent 学习助手最小闭环 + Agent 显式 State + Step 记录 + Agent 动态 Loop + Stop Condition + Agent Loop RAG_SEARCH 检索动作
+代码结构 + 编译验证 + 真实接口调用验证 + System Prompt + 请求级 Model Options + Streaming + SimpleLoggerAdvisor + Structured Output + Tool Calling + Embedding + JPA/PostgreSQL 配置 + pgvector 最小存取接口 + RAG 最小闭环 + RAG 文档切分入库 + RAG 检索诊断 + RAG 自然切分策略 + RAG 引用摘要 + RAG 同名文档替换导入 + RAG 文档来源元数据 + TXT/Markdown 文件导入 + Markdown 标题感知切分 + RAG 来源过滤检索 + Markdown 低价值 chunk 合并 + RAG 稳定来源身份替换 + Chat Memory JVM 内存版最小闭环 + Chat Memory 会话清理接口 + Agent 学习助手最小闭环 + Agent 显式 State + Step 记录 + Agent 动态 Loop + Stop Condition + Agent Loop RAG_SEARCH 检索动作 + Agent Loop ASK_USER 澄清动作
 ```
 
 已验证：
@@ -236,6 +236,7 @@ POST /api/ai/agent/study/loop
 → 每轮由 ChatClient 结构化输出 StudyAgentDecision
 → action=GET_LEARNING_PROGRESS 时 Java 服务层执行 LearningProgressTool 并记录 observation
 → action=RAG_SEARCH 时 Java 服务层调用 RagService.retrieveReferences 只检索资料，不直接生成回答
+→ action=ASK_USER 时停止循环，返回 stopReason=WAITING_USER_INPUT 和澄清问题
 → action=FINISH 时停止循环并返回 answer
 → 达到 maxSteps 仍未 FINISH 时按 MAX_STEPS_REACHED 停止
 → 只把用户 goal 和最终 answer 写回 Memory，内部决策步骤不写入 Memory

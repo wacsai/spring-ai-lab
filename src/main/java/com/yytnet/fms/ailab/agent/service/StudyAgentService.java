@@ -37,6 +37,7 @@ public class StudyAgentService {
     private static final double AGENT_RAG_MAX_DISTANCE = 0.6;
     private static final String ACTION_GET_LEARNING_PROGRESS = "GET_LEARNING_PROGRESS";
     private static final String ACTION_RAG_SEARCH = "RAG_SEARCH";
+    private static final String ACTION_ASK_USER = "ASK_USER";
     private static final String ACTION_FINISH = "FINISH";
 
     // Memory 先处理历史上下文，Logger 再记录最终请求，方便观察 Agent 看到的上下文。
@@ -87,17 +88,20 @@ public class StudyAgentService {
     private static final String LOOP_DECISION_PROMPT = """
             你是 spring-ai-lab 项目的学习助手 Agent 决策器。
 
-            你只能在下面三个 action 中选择一个：
+            你只能在下面四个 action 中选择一个：
             - GET_LEARNING_PROGRESS：需要读取项目学习进度
             - RAG_SEARCH：需要从项目知识库/学习笔记中检索 Spring AI 资料
+            - ASK_USER：用户目标不清楚，必须先让用户补充信息
             - FINISH：已经具备足够信息，可以输出最终回答
 
             决策规则：
+            - 如果用户只说“继续”“下一步”“帮我规划”等，但没有说明想学哪个方向，并且当前 memoryContext 也无法判断偏好，选择 ASK_USER，并在 answer 中提出一个简短澄清问题
             - 如果用户询问当前阶段、学习进度、下一步，并且 steps 里还没有 LearningProgressTool 的 observation，选择 GET_LEARNING_PROGRESS
             - 如果用户询问 Spring AI 概念、RAG、Memory、Tool Calling、Agent 等项目知识，并且 steps 里还没有 RAG_SEARCH 的 observation，选择 RAG_SEARCH，并在 query 中放入适合检索的问题
             - 如果用户问题同时需要学习进度和知识库资料，就先补齐缺少的 observation，再选择 FINISH
             - 如果 steps 里的 observation 已经足够回答用户 goal，选择 FINISH，并在 answer 中给出最终中文回答
             - 当前 Agent 只做 Spring AI 学习规划和解释，不执行文件修改、数据库写入、系统命令或外部请求
+            - 如果用户要求执行当前边界外的任务，例如直接修改代码、操作数据库、调用系统命令或实现 MCP 服务，选择 ASK_USER 或 FINISH 说明当前边界，不要编造已执行结果
             - answer 要先给结论，再给必要解释
 
             当前 goal:
@@ -269,6 +273,17 @@ public class StudyAgentService {
                     continue;
                 }
 
+                if (ACTION_ASK_USER.equals(action)) {
+                    answer = normalizeClarificationQuestion(decision.answer(), decision.reason());
+                    steps.add(new StudyAgentStepResp(
+                            stepNo,
+                            "ASK_USER: 信息不足，等待用户补充",
+                            answer
+                    ));
+                    stopReason = "WAITING_USER_INPUT";
+                    break;
+                }
+
                 if (ACTION_FINISH.equals(action)) {
                     answer = normalizeFinalAnswer(decision.answer(), decision.reason());
                     steps.add(new StudyAgentStepResp(
@@ -379,6 +394,16 @@ public class StudyAgentService {
             return reason.strip();
         }
         return "模型判断当前信息足够，但没有返回具体回答。";
+    }
+
+    private String normalizeClarificationQuestion(String answer, String reason) {
+        if (answer != null && !answer.isBlank()) {
+            return answer.strip();
+        }
+        if (reason != null && !reason.isBlank()) {
+            return "我需要你补充一点信息：" + reason.strip();
+        }
+        return "我需要你补充一点信息：你想继续学习 RAG、Agent，还是准备进入 MCP？";
     }
 
     private String normalizeSearchQuery(String query, String goal) {
