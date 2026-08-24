@@ -164,21 +164,7 @@ public class RagService {
             String sourceType = normalizeOptional(req.sourceType());
             String externalId = normalizeOptional(req.externalId());
 
-            // RAG 的第一步是 Retrieval(程序查资料)：
-            // 先复用 vector 模块，把用户问题转成 query embedding，再用 pgvector 找相似资料。
-            // sourceType / externalId 是可选的检索范围过滤：
-            // - 不传：从整个 ai_document_embedding 表里找相似 chunk。
-            // - 传 sourceType：只从某类来源里找，例如 MARKDOWN。
-            // - 传 externalId：只从某个外部文档里找，例如 spring-ai-rag-sample.md。
-            List<RagReferenceResp> retrievedReferences = vectorDocumentService
-                    .searchSimilarDocuments(req.question(), topK, sourceType, externalId)
-                    .stream()
-                    .map(this::toReference)
-                    .toList();
-
-            // retrievedReferences 是 pgvector 按 topK 取回的原始候选。
-            // references 是真正进入 Prompt 的资料；rejectedReferences 是因为距离超过 maxDistance 被过滤掉的资料。
-            // 这样接口响应里能直接观察“检索到了什么”和“最终用了什么”。
+            List<RagReferenceResp> retrievedReferences = retrieveCandidateReferences(req.question(), topK, sourceType, externalId);
             List<RagReferenceResp> references = filterUsedReferences(retrievedReferences, maxDistance);
             List<RagReferenceResp> rejectedReferences = filterRejectedReferences(retrievedReferences, maxDistance);
             List<RagCitationResp> citations = buildCitations(references);
@@ -216,6 +202,43 @@ public class RagService {
         } catch (RuntimeException ex) {
             throw new AiRagException("RAG 问答失败", ex);
         }
+    }
+
+    public List<RagReferenceResp> retrieveReferences(String question,
+                                                     int topK,
+                                                     double maxDistance,
+                                                     String sourceType,
+                                                     String externalId) {
+        try {
+            // 这个方法只做 Retrieval，不调用 ChatClient 生成回答。
+            // Agent Loop 的 RAG_SEARCH action 复用它，把检索结果作为 observation 放回 Agent State。
+            List<RagReferenceResp> retrievedReferences = retrieveCandidateReferences(
+                    question,
+                    topK,
+                    normalizeOptional(sourceType),
+                    normalizeOptional(externalId)
+            );
+            return filterUsedReferences(retrievedReferences, maxDistance);
+        } catch (RuntimeException ex) {
+            throw new AiRagException("RAG 检索失败", ex);
+        }
+    }
+
+    private List<RagReferenceResp> retrieveCandidateReferences(String question,
+                                                              int topK,
+                                                              String sourceType,
+                                                              String externalId) {
+        // RAG 的第一步是 Retrieval(程序查资料)：
+        // 先复用 vector 模块，把用户问题转成 query embedding，再用 pgvector 找相似资料。
+        // sourceType / externalId 是可选的检索范围过滤：
+        // - 不传：从整个 ai_document_embedding 表里找相似 chunk。
+        // - 传 sourceType：只从某类来源里找，例如 MARKDOWN。
+        // - 传 externalId：只从某个外部文档里找，例如 spring-ai-rag-sample.md。
+        return vectorDocumentService
+                .searchSimilarDocuments(question, topK, sourceType, externalId)
+                .stream()
+                .map(this::toReference)
+                .toList();
     }
 
     private List<RagReferenceResp> filterUsedReferences(List<RagReferenceResp> retrievedReferences,

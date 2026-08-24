@@ -8,6 +8,8 @@ import com.yytnet.fms.ailab.agent.dto.resp.StudyAgentStateResp;
 import com.yytnet.fms.ailab.agent.dto.resp.StudyAgentStepResp;
 import com.yytnet.fms.ailab.common.exception.AiAgentException;
 import com.yytnet.fms.ailab.memory.config.MemoryChatConfig;
+import com.yytnet.fms.ailab.rag.dto.resp.RagReferenceResp;
+import com.yytnet.fms.ailab.rag.service.RagService;
 import com.yytnet.fms.ailab.tool.dto.resp.LearningProgressResp;
 import com.yytnet.fms.ailab.tool.service.LearningProgressTool;
 import org.springframework.ai.chat.client.ChatClient;
@@ -31,7 +33,10 @@ public class StudyAgentService {
     private static final String STEPS_AGENT_TYPE = "study-agent-state-v1";
     private static final String LOOP_AGENT_TYPE = "study-agent-loop-v1";
     private static final int MAX_LOOP_STEPS = 3;
+    private static final int AGENT_RAG_TOP_K = 3;
+    private static final double AGENT_RAG_MAX_DISTANCE = 0.6;
     private static final String ACTION_GET_LEARNING_PROGRESS = "GET_LEARNING_PROGRESS";
+    private static final String ACTION_RAG_SEARCH = "RAG_SEARCH";
     private static final String ACTION_FINISH = "FINISH";
 
     // Memory 先处理历史上下文，Logger 再记录最终请求，方便观察 Agent 看到的上下文。
@@ -82,13 +87,16 @@ public class StudyAgentService {
     private static final String LOOP_DECISION_PROMPT = """
             你是 spring-ai-lab 项目的学习助手 Agent 决策器。
 
-            你只能在下面两个 action 中选择一个：
+            你只能在下面三个 action 中选择一个：
             - GET_LEARNING_PROGRESS：需要读取项目学习进度
+            - RAG_SEARCH：需要从项目知识库/学习笔记中检索 Spring AI 资料
             - FINISH：已经具备足够信息，可以输出最终回答
 
             决策规则：
-            - 如果 steps 里还没有 LearningProgressTool 的 observation，优先选择 GET_LEARNING_PROGRESS
-            - 如果 steps 里已经有 LearningProgressTool 的 observation，选择 FINISH，并在 answer 中给出最终中文回答
+            - 如果用户询问当前阶段、学习进度、下一步，并且 steps 里还没有 LearningProgressTool 的 observation，选择 GET_LEARNING_PROGRESS
+            - 如果用户询问 Spring AI 概念、RAG、Memory、Tool Calling、Agent 等项目知识，并且 steps 里还没有 RAG_SEARCH 的 observation，选择 RAG_SEARCH，并在 query 中放入适合检索的问题
+            - 如果用户问题同时需要学习进度和知识库资料，就先补齐缺少的 observation，再选择 FINISH
+            - 如果 steps 里的 observation 已经足够回答用户 goal，选择 FINISH，并在 answer 中给出最终中文回答
             - 当前 Agent 只做 Spring AI 学习规划和解释，不执行文件修改、数据库写入、系统命令或外部请求
             - answer 要先给结论，再给必要解释
 
@@ -106,11 +114,13 @@ public class StudyAgentService {
     private final ChatMemory chatMemory;
     private final MessageChatMemoryAdvisor memoryAdvisor;
     private final LearningProgressTool learningProgressTool;
+    private final RagService ragService;
     private final String model;
 
     public StudyAgentService(ChatClient.Builder chatClientBuilder,
                              ChatMemory chatMemory,
                              LearningProgressTool learningProgressTool,
+                             RagService ragService,
                              @Value("${spring.ai.ollama.chat.model}") String model) {
         this.chatClient = chatClientBuilder.build();
         this.chatMemory = chatMemory;
@@ -118,6 +128,7 @@ public class StudyAgentService {
                 .order(0)
                 .build();
         this.learningProgressTool = learningProgressTool;
+        this.ragService = ragService;
         this.model = model;
     }
 
@@ -235,6 +246,29 @@ public class StudyAgentService {
                     continue;
                 }
 
+                if (ACTION_RAG_SEARCH.equals(action)) {
+                    // RAG_SEARCH 只做检索，不直接让 RAG 模块生成最终回答。
+                    // 检索结果作为 observation 回到 Agent State，下一轮再由模型决定是否 FINISH。
+                    String query = normalizeSearchQuery(decision.query(), goal);
+                    List<RagReferenceResp> references = ragService.retrieveReferences(
+                            query,
+                            AGENT_RAG_TOP_K,
+                            AGENT_RAG_MAX_DISTANCE,
+                            null,
+                            null
+                    );
+                    steps.add(new StudyAgentStepResp(
+                            stepNo,
+                            "RAG_SEARCH: topK=%d, maxDistance=%.1f, query=%s".formatted(
+                                    AGENT_RAG_TOP_K,
+                                    AGENT_RAG_MAX_DISTANCE,
+                                    query
+                            ),
+                            formatRagObservation(references)
+                    ));
+                    continue;
+                }
+
                 if (ACTION_FINISH.equals(action)) {
                     answer = normalizeFinalAnswer(decision.answer(), decision.reason());
                     steps.add(new StudyAgentStepResp(
@@ -347,6 +381,13 @@ public class StudyAgentService {
         return "模型判断当前信息足够，但没有返回具体回答。";
     }
 
+    private String normalizeSearchQuery(String query, String goal) {
+        if (query != null && !query.isBlank()) {
+            return query.strip();
+        }
+        return goal;
+    }
+
     private String formatProgressObservation(LearningProgressResp progress) {
         return """
                 currentStage: %s
@@ -361,6 +402,40 @@ public class StudyAgentService {
                 progress.verification(),
                 progress.source()
         ).strip();
+    }
+
+    private String formatRagObservation(List<RagReferenceResp> references) {
+        if (references.isEmpty()) {
+            return "RAG_SEARCH 没有检索到满足相似度阈值的资料。";
+        }
+
+        List<String> lines = new ArrayList<>();
+        for (int i = 0; i < references.size(); i++) {
+            RagReferenceResp reference = references.get(i);
+            lines.add("""
+                    资料 %d:
+                    title: %s
+                    documentTitle: %s
+                    sourceType: %s
+                    externalId: %s
+                    chunk: %s/%s
+                    distance: %.4f
+                    similarity: %.4f
+                    content: %s
+                    """.formatted(
+                    i + 1,
+                    reference.title(),
+                    reference.documentTitle(),
+                    reference.sourceType(),
+                    reference.externalId(),
+                    reference.chunkIndex(),
+                    reference.chunkCount(),
+                    reference.distance(),
+                    reference.similarity(),
+                    reference.content()
+            ).strip());
+        }
+        return String.join("\n\n", lines);
     }
 
     private String summarizeAnswer(String answer) {

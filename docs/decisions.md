@@ -1024,3 +1024,39 @@ FINISH
 - `/api/ai/agent/study/steps` 保留为固定两步的显式 State 学习版本。
 - `/api/ai/agent/study/loop` 用于观察动态决策、observation 传递和停止条件。
 - 内部决策步骤不写入 Chat Memory，只把用户 goal 和最终 answer 作为一轮对话保存。
+
+---
+
+## ADR-028: Agent Loop 的 RAG_SEARCH 只复用 Retrieval
+
+Status: Accepted
+
+### Decision
+
+在 `POST /api/ai/agent/study/loop` 中新增受控 action：
+
+```text
+RAG_SEARCH
+```
+
+该 action 不直接调用完整的 RAG 问答流程，而是调用：
+
+```text
+RagService.retrieveReferences(...)
+```
+
+只完成知识库检索，并把检索到的 references 作为 observation 放回 Agent State。
+
+### Reason
+
+- Agent Loop 应该保持“模型决策 → Java 执行 action → observation → 再决策”的结构。
+- 如果直接调用完整 `RagService.chat(...)`，Agent 内部会嵌套另一次生成回答，步骤边界不清晰。
+- RAG_SEARCH 只做 Retrieval，可以让最终回答仍由 Agent 在 FINISH 阶段统一生成。
+- 当前阶段复用已有 pgvector 检索能力，不新增表结构、不引入 MCP、不提前实现复杂权限系统。
+
+### Impact
+
+- `/api/ai/rag/chat` 继续负责独立 RAG 问答。
+- `RagService.retrieveReferences(...)` 成为可复用的检索能力，供 Agent action 调用。
+- `/api/ai/agent/study/loop` 可以根据 goal 动态选择 `GET_LEARNING_PROGRESS`、`RAG_SEARCH` 或 `FINISH`。
+- 后续如接入 MCP、外部 API 或业务数据库，也应优先按 action 暴露受控能力，而不是让模型直接执行任意操作。
