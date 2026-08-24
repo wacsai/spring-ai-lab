@@ -6,10 +6,13 @@ import com.yytnet.fms.ailab.mcp.dto.resp.McpChatResp;
 import org.springframework.ai.chat.client.ChatClient;
 import org.springframework.ai.chat.client.advisor.SimpleLoggerAdvisor;
 import org.springframework.ai.ollama.api.OllamaChatOptions;
+import org.springframework.ai.tool.ToolCallback;
 import org.springframework.ai.tool.ToolCallbackProvider;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
+import java.time.Duration;
+import java.util.ArrayList;
 import java.util.List;
 
 @Service
@@ -48,13 +51,15 @@ public class McpClientChatService {
 
     public McpChatResp chat(ChatReq req) {
         ToolCallbackProvider[] providers = mcpToolCallbackProviders.toArray(ToolCallbackProvider[]::new);
-        int toolCount = countTools(providers);
+        List<String> toolNames = getToolNames(providers);
+        int toolCount = toolNames.size();
 
         if (toolCount == 0) {
             throw new AiMcpException("没有发现可用的 MCP 工具，请先启动 spring-ai-mcp-server-demo 并确认 8081 端口可访问");
         }
 
         try {
+            long startNanos = System.nanoTime();
             String content = chatClient.prompt()
                     .system(SYSTEM_PROMPT)
                     .user(req.msg())
@@ -66,24 +71,31 @@ public class McpClientChatService {
                     .options(buildOptions(req))
                     .call()
                     .content();
+            long durationMs = Duration.ofNanos(System.nanoTime() - startNanos).toMillis();
 
             return new McpChatResp(
                     content == null ? "" : content,
+                    "MCP_CHAT",
+                    model,
+                    durationMs,
                     providers.length,
                     toolCount,
-                    "当前接口用于验证 spring-ai-lab 能通过 MCP Client 调用 spring-ai-mcp-server-demo 暴露的远程工具。"
+                    toolNames,
+                    "Phase 11 轻量观测字段：feature/model/durationMs/mcpToolNames 用于学习阶段排查本次 AI 调用。"
             );
         } catch (RuntimeException ex) {
             throw new AiMcpException("MCP 远程工具调用失败，请确认 spring-ai-mcp-server-demo 已启动且端口为 8081", ex);
         }
     }
 
-    private int countTools(ToolCallbackProvider[] providers) {
-        int count = 0;
+    private List<String> getToolNames(ToolCallbackProvider[] providers) {
+        List<String> toolNames = new ArrayList<>();
         for (ToolCallbackProvider provider : providers) {
-            count += provider.getToolCallbacks().length;
+            for (ToolCallback callback : provider.getToolCallbacks()) {
+                toolNames.add(callback.getToolDefinition().name());
+            }
         }
-        return count;
+        return toolNames;
     }
 
     private OllamaChatOptions.Builder buildOptions(ChatReq req) {

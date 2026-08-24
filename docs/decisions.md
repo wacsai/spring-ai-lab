@@ -1282,3 +1282,73 @@ A1003 已签收
 - 真实验证时重新启动 MCP Server 后，主项目已能发现 2 个远程 MCP tools。
 - 已通过 `POST /api/ai/mcp/chat` 验证模型可以从“帮我查一下订单 A1001 的物流状态”中提取 `orderNo=A1001`，并通过 MCP 调用远程订单工具。
 - 后续接入真实订单系统时，需要补充权限校验、参数校验、审计日志、超时和失败降级。
+
+---
+
+## ADR-035: Phase 11 先做轻量 Observability / Evaluation
+
+Status: Accepted
+
+### Decision
+
+当前 Phase 11 不接入 ELK、Prometheus、Grafana、OpenTelemetry、Langfuse 或 Ragas 等外部平台。
+
+先在 `POST /api/ai/mcp/chat` 响应中增加轻量诊断字段：
+
+```text
+feature
+model
+durationMs
+mcpToolNames
+```
+
+### Reason
+
+- 当前项目是 Spring AI 学习项目，过早接入观测平台会把重点转移到平台集成。
+- 已有 `SimpleLoggerAdvisor`、RAG references、Agent steps、MCP tool count 等基础诊断能力。
+- MCP Chat 刚完成远程工具闭环，适合作为 Phase 11 的第一个轻量观测样例。
+
+### Impact
+
+- 调用方可以直接从响应里看到本次 AI 调用的能力类型、模型、耗时和当前可用远程工具。
+- 当前只记录本次 ChatClient 调用耗时，不做分布式 trace 和完整 token/cost 统计。
+- Evaluation 后续先从固定样例和结构性断言开始，不引入复杂评估平台。
+
+---
+
+## ADR-036: 第一轮 Spring AI 学习主线收尾
+
+Status: Accepted
+
+### Decision
+
+第一轮 Spring AI 学习主线到此收尾。
+
+已覆盖：
+
+```text
+ChatClient
+Structured Output
+Tool Calling
+Embedding
+pgvector
+RAG
+Memory
+Agent
+MCP
+Lightweight Observability
+```
+
+当前不继续扩展复杂功能，例如生产级 Agent 编排、MCP Resource / Prompt、OpenTelemetry、Prometheus、Grafana、Langfuse 或完整评估平台。
+
+### Reason
+
+- 当前项目已经覆盖 Spring AI 应用开发的核心能力，并且多数阶段已通过真实接口验证。
+- 继续堆功能会降低学习主线的清晰度。
+- 下一步更有价值的是整理文档、形成回顾材料，并用最小 Evaluation 检查核心接口是否退化。
+
+### Impact
+
+- README 改为项目入口文档，说明启动方式、主要接口和当前观测方式。
+- 新增 `docs/phase-summary.md` 作为第一轮阶段总结。
+- 后续增强优先级为：最小 Evaluation、Qdrant 对比实验、生产化差距整理。

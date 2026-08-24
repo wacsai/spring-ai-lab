@@ -94,6 +94,7 @@ Last Updated: 2026-08-24
 - [x] 已在 MCP Server 编译配置中开启 `parameters=true`，用于保留 `orderNo` 参数名
 - [x] 已通过真实接口验证 `POST /api/ai/mcp/chat` 可发现 1 个 MCP Server provider 和 2 个远程 tools
 - [x] 已通过真实接口验证模型可以提取 `orderNo=A1001` 并调用远程 MCP 订单工具
+- [x] 已在 `POST /api/ai/mcp/chat` 增加 Phase 11 轻量诊断字段：`feature` / `model` / `durationMs` / `mcpToolNames`
 
 ### GPU / Docker
 
@@ -122,7 +123,7 @@ Last Updated: 2026-08-24
 
 ## Current Stage
 
-**MCP Server + MCP Client 带参数工具已通过真实接口验证**
+**第一轮 Spring AI 学习主线已完成**
 
 当前真实状态：
 
@@ -372,6 +373,8 @@ McpOrderTool#getMcpOrderStatus(orderNo)
 返回订单状态、物流、预计送达时间和 source
 ↓
 模型基于工具结果生成最终回答
+↓
+响应返回 feature / model / durationMs / mcpToolNames 等轻量诊断字段
 ```
 
 已验证结果：
@@ -385,27 +388,27 @@ POST /api/ai/mcp/chat
 → 返回 A1001 已发货、运输中、当前到达上海转运中心、预计送达 2026-08-20
 ```
 
-当前代码已经完成最小闭环、System Prompt 模板、请求级模型参数覆盖、普通调用、流式调用、基础 Advisor 挂载、结构化输出、Tool Calling 基础接口、带参数 Tool、Embedding 最小接口、JPA/PostgreSQL 依赖接入、pgvector 初始化脚本、文档向量入库接口、精确相似度检索接口、最小 RAG 问答接口、RAG 文档切分入库接口、RAG 检索诊断字段、RAG 引用摘要、同名文档替换导入、来源元数据、TXT/Markdown 文件上传导入、Markdown 标题感知切分、RAG 来源过滤检索、Markdown 低价值 chunk 合并、RAG 稳定来源身份替换、Chat Memory JVM 内存版最小闭环、Chat Memory 会话清理接口、Agent 学习助手最小闭环、Agent 显式 State + Step 记录、Agent 动态 Loop + Stop Condition、Agent Loop RAG_SEARCH 检索动作、Agent Loop ASK_USER 澄清动作、Agent Loop 重复 action 保护、RAG_SEARCH query 保守归一化、Agent 基础阶段收口、MCP Server + Client 最小接入、MCP 带参数工具和 MCP 真实接口验证。
+当前代码已经完成最小闭环、System Prompt 模板、请求级模型参数覆盖、普通调用、流式调用、基础 Advisor 挂载、结构化输出、Tool Calling 基础接口、带参数 Tool、Embedding 最小接口、JPA/PostgreSQL 依赖接入、pgvector 初始化脚本、文档向量入库接口、精确相似度检索接口、最小 RAG 问答接口、RAG 文档切分入库接口、RAG 检索诊断字段、RAG 引用摘要、同名文档替换导入、来源元数据、TXT/Markdown 文件上传导入、Markdown 标题感知切分、RAG 来源过滤检索、Markdown 低价值 chunk 合并、RAG 稳定来源身份替换、Chat Memory JVM 内存版最小闭环、Chat Memory 会话清理接口、Agent 学习助手最小闭环、Agent 显式 State + Step 记录、Agent 动态 Loop + Stop Condition、Agent Loop RAG_SEARCH 检索动作、Agent Loop ASK_USER 澄清动作、Agent Loop 重复 action 保护、RAG_SEARCH query 保守归一化、Agent 基础阶段收口、MCP Server + Client 最小接入、MCP 带参数工具、MCP 真实接口验证、MCP Chat 轻量诊断字段和第一轮阶段总结。
 
 当前数据库配置已启动到执行 schema 阶段；`vector(2560)` 字段可保留，但当前 pgvector HNSW 索引最多支持 2000 维，因此初始化脚本暂不创建 HNSW 索引。向量入库、检索代码、最小 RAG 接口、RAG 文档切分入库接口、RAG 检索诊断字段和 RAG 自然切分策略已编译通过，并已通过真实请求验证。RAG 引用摘要、同名文档替换导入、来源元数据、TXT/Markdown 文件上传导入、Markdown 标题感知切分、RAG 来源过滤检索、Markdown 低价值 chunk 合并和 RAG 稳定来源身份替换已完成代码实现。Chat Memory JVM 内存版和会话清理接口已完成代码实现。Agent 学习助手最小闭环、显式 State + Step 记录、动态 Loop + Stop Condition、RAG_SEARCH action 和 ASK_USER action 已完成代码实现，待真实接口调用验证。
 
 ## Next Task
 
-进入 **Observability / Evaluation 基础学习**：
+第一轮学习主线已完成。后续进入增强阶段：
 
 ```text
-Observability 基础概念
-→ 观察 ChatClient 请求、响应、token、耗时、tool call
-→ 区分日志、指标、追踪
-→ Evaluation 基础概念
-→ 先做最小可回归测试样例，而不是引入复杂平台
+Evaluation 最小回归测试
+→ 固定问题
+→ 关键字 / 结构性断言
+→ RAG references / MCP tool count / Agent stopReason 检查
+→ 不引入复杂评估平台
 ```
 
 验收标准：
 
-- 理解 AI 应用为什么需要可观测性和评估
-- 明确当前项目已有 SimpleLoggerAdvisor 的边界
-- 设计最小 Observability / Evaluation demo，不提前接复杂平台
+- README 能说明项目怎么启动和怎么验证
+- `docs/phase-summary.md` 能回顾每个阶段的目标、关键代码和学习重点
+- 后续增强优先做最小 Evaluation，不继续堆功能
 
 ## Pending
 
@@ -435,6 +438,7 @@ Observability 基础概念
 - [x] MCP Server + Client 最小接入
 - [x] MCP 带参数工具接入
 - [x] MCP 带参数工具真实接口验证
-- [ ] Observability
+- [x] Observability 轻量诊断字段起步
+- [x] 第一轮阶段总结
 - [ ] Evaluation
 - [ ] Qdrant 对比实验

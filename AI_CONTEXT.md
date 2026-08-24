@@ -106,7 +106,7 @@ Spring AI 负责：
 
 当前真实状态：
 
-**MCP Server + MCP Client 带参数工具已通过真实接口验证**
+**第一轮 Spring AI 学习主线已完成**
 
 当前代码已经从 Controller demo 推进到基础 AI 调用链：
 
@@ -133,7 +133,7 @@ qwen3.5:4b
 当前已完成：
 
 ```text
-代码结构 + 编译验证 + 真实接口调用验证 + System Prompt + 请求级 Model Options + Streaming + SimpleLoggerAdvisor + Structured Output + Tool Calling + Embedding + JPA/PostgreSQL 配置 + pgvector 最小存取接口 + RAG 最小闭环 + RAG 文档切分入库 + RAG 检索诊断 + RAG 自然切分策略 + RAG 引用摘要 + RAG 同名文档替换导入 + RAG 文档来源元数据 + TXT/Markdown 文件导入 + Markdown 标题感知切分 + RAG 来源过滤检索 + Markdown 低价值 chunk 合并 + RAG 稳定来源身份替换 + Chat Memory JVM 内存版最小闭环 + Chat Memory 会话清理接口 + Agent 学习助手最小闭环 + Agent 显式 State + Step 记录 + Agent 动态 Loop + Stop Condition + Agent Loop RAG_SEARCH 检索动作 + Agent Loop ASK_USER 澄清动作 + Agent Loop 重复 action 保护 + Agent Loop RAG_SEARCH query 保守归一化 + Agent 基础阶段收口 + 独立 MCP Server 最小工具 + 主项目 MCP Client 最小接入 + MCP 带参数订单查询工具真实接口验证
+代码结构 + 编译验证 + 真实接口调用验证 + System Prompt + 请求级 Model Options + Streaming + SimpleLoggerAdvisor + Structured Output + Tool Calling + Embedding + JPA/PostgreSQL 配置 + pgvector 最小存取接口 + RAG 最小闭环 + RAG 文档切分入库 + RAG 检索诊断 + RAG 自然切分策略 + RAG 引用摘要 + RAG 同名文档替换导入 + RAG 文档来源元数据 + TXT/Markdown 文件导入 + Markdown 标题感知切分 + RAG 来源过滤检索 + Markdown 低价值 chunk 合并 + RAG 稳定来源身份替换 + Chat Memory JVM 内存版最小闭环 + Chat Memory 会话清理接口 + Agent 学习助手最小闭环 + Agent 显式 State + Step 记录 + Agent 动态 Loop + Stop Condition + Agent Loop RAG_SEARCH 检索动作 + Agent Loop ASK_USER 澄清动作 + Agent Loop 重复 action 保护 + Agent Loop RAG_SEARCH query 保守归一化 + Agent 基础阶段收口 + 独立 MCP Server 最小工具 + 主项目 MCP Client 最小接入 + MCP 带参数订单查询工具真实接口验证 + MCP Chat 轻量诊断字段 + 第一轮阶段总结
 ```
 
 已验证：
@@ -266,6 +266,10 @@ MCP 带参数工具：
 POST /api/ai/mcp/chat
 → mcpToolProviderCount=1
 → mcpToolCount=2
+→ feature=MCP_CHAT
+→ model=qwen3.5:4b
+→ durationMs 记录本次 ChatClient 调用耗时
+→ mcpToolNames 返回当前可用远程工具名
 → 模型成功调用远程 getMcpOrderStatus(orderNo)
 → 返回 A1001 已发货、物流到达上海转运中心、预计送达 2026-08-20
 ```
@@ -278,7 +282,7 @@ Goal / State / Action / Observation / Loop / Stop Condition / Memory / Java Safe
 
 当前不继续深挖 Prompt 微调、RAG query rewrite、rerank、复杂工具编排、权限审批、状态持久化或多 Agent 协作。
 模型 action 选择存在不稳定性，后续进入 Observability / Evaluation 阶段再系统评估。
-MCP 基础阶段已收口；下一阶段进入 Observability / Evaluation。
+MCP 基础阶段已收口；Phase 11 已先完成轻量观测字段。第一轮 Spring AI 学习主线到此完成，后续进入增强、评估和对比实验。
 ```
 
 当前接口支持：

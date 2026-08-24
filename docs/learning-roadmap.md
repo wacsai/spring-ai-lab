@@ -2,27 +2,22 @@
 
 ## Current Baseline
 
-当前仓库已完成 Phase 1A、Phase 1B、Phase 1C、Advisors 基础、Structured Output、Tool Calling 基础和 Embedding 最小闭环。
+当前仓库已完成第一轮 Spring AI 学习主线：
 
 ```text
-POST /api/ai/chat
-↓
-ChatController
-↓
-ChatService
-↓
 ChatClient
-↓
-System Prompt + User Prompt + Model Options
-↓
-SimpleLoggerAdvisor
-↓
-call() / stream()
-↓
-Ollama qwen3.5:4b
+→ Structured Output
+→ Tool Calling
+→ Embedding
+→ PostgreSQL + pgvector
+→ RAG
+→ Chat Memory
+→ Agent
+→ MCP
+→ 轻量 Observability
 ```
 
-当前接口支持：
+基础聊天接口支持：
 
 - `msg`
 - `systemPrompt`
@@ -31,15 +26,26 @@ Ollama qwen3.5:4b
 - `topK`
 - `numPredict`
 
-当前接口：
+当前主要接口：
 
 - `POST /api/ai/chat`
 - `POST /api/ai/chat/stream`
 - `POST /api/ai/structured/movie/extract`
 - `POST /api/ai/tool/chat`
 - `POST /api/ai/embedding`
+- `POST /api/ai/vector/documents`
+- `POST /api/ai/vector/search`
+- `POST /api/ai/rag/chat`
+- `POST /api/ai/rag/documents`
+- `POST /api/ai/rag/documents/files`
+- `POST /api/ai/memory/chat`
+- `DELETE /api/ai/memory/conversations/{conversationId}`
+- `POST /api/ai/agent/study`
+- `POST /api/ai/agent/study/steps`
+- `POST /api/ai/agent/study/loop`
+- `POST /api/ai/mcp/chat`
 
-后续按阶段推进，每个阶段只完成一个明确能力，并保持可运行、可验证。
+后续不继续堆新能力，优先做最小 Evaluation、Qdrant 对比实验和生产化差距整理。
 
 ## Phase 1A - Spring Boot + Spring AI + Ollama 最小闭环
 

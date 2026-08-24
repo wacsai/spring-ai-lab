@@ -20,7 +20,7 @@ public class LearningProgressTool {
     public LearningProgressResp getSpringAiLearningProgress() {
         // 这个工具是只读的：不查数据库、不写文件、不调用外部系统，方便先验证 Tool Calling 的核心链路。
         return new LearningProgressResp(
-                "MCP Server + MCP Client 最小接入已完成，准备进行真实接口验证",
+                "第一轮 Spring AI 学习主线已完成",
                 List.of(
                         "ChatClient 普通调用",
                         "System Prompt",
@@ -46,10 +46,13 @@ public class LearningProgressTool {
                         "Agent 基础阶段收口",
                         "独立 spring-ai-mcp-server-demo 最小 MCP Server",
                         "spring-ai-lab MCP Client 连接远程 MCP Server",
-                        "MCP 带参数订单查询工具"
+                        "MCP 带参数订单查询工具",
+                        "MCP 带参数工具真实接口验证",
+                        "MCP Chat 轻量观测字段",
+                        "第一轮阶段总结文档"
                 ),
-                "MCP 真实接口验证",
-                "当前 MCP 阶段已覆盖无参数远程工具和带参数远程工具；下一步通过真实请求验证模型能否提取订单号并通过 MCP 传给远程 Server。",
+                "Evaluation 最小回归测试",
+                "当前项目已经覆盖 Spring AI 应用开发主线。后续建议先做固定问题、关键字断言、RAG references、MCP tool count、Agent stopReason 这类最小评估，不继续堆复杂功能。",
                 "LearningProgressTool#getSpringAiLearningProgress"
         );
     }
